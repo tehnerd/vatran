@@ -27,13 +27,13 @@ set(KATRAN_CAPI_HEADERS
 )
 
 # Shared library
-add_library(katran_capi SHARED ${KATRAN_CAPI_SOURCES})
+#add_library(katran_capi SHARED ${KATRAN_CAPI_SOURCES})
 
 # Static library
 add_library(katran_capi_static STATIC ${KATRAN_CAPI_SOURCES})
 
 # Configure both targets
-foreach(target katran_capi katran_capi_static)
+foreach(target katran_capi_static)
     target_include_directories(${target}
         PUBLIC
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -56,10 +56,10 @@ foreach(target katran_capi katran_capi_static)
 endforeach()
 
 # Shared library versioning
-set_target_properties(katran_capi PROPERTIES
-    VERSION 1.0.0
-    SOVERSION 1
-)
+#set_target_properties(katran_capi PROPERTIES
+#    VERSION 1.0.0
+#    SOVERSION 1
+#)
 
 # Installation rules
 install(
@@ -68,7 +68,7 @@ install(
 )
 
 install(
-    TARGETS katran_capi katran_capi_static
+    TARGETS katran_capi_static
     EXPORT katran-capi-exports
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
