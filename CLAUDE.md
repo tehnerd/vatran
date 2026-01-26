@@ -10,6 +10,8 @@ all input param
 
 Do not use/read any GO code outside of this project directory
 
+Do not add Facebook's copyrights at the top of the files
+
 main language of the project is
 1. C (for katran's library bindings)
 2. Go (for the main backend code)

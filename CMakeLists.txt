@@ -44,9 +44,17 @@ foreach(target katran_capi_static)
     )
 
     target_link_libraries(${target}
-        PRIVATE
+	    -Wl,--start-group
             katranlb
             Folly::folly
+	    bpfadapter
+	    chhelpers
+	    iphelpers
+	    pcapwriter
+	    katransimulator
+	    ${GFLAGS}
+	    ${PTHREAD}
+	    -Wl,--end-group
     )
 
     set_target_properties(${target} PROPERTIES
@@ -54,6 +62,20 @@ foreach(target katran_capi_static)
         CXX_STANDARD_REQUIRED ON
     )
 endforeach()
+
+# Simple C smoke test binary for the C API (testing mode, no BPF load).
+add_executable(katran_capi_smoke src/katran_capi_smoke.c)
+target_include_directories(katran_capi_smoke
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_link_libraries(katran_capi_smoke
+    katran_capi_static
+)
+# Linker must be C++ because katran_capi_static depends on C++ libs.
+set_target_properties(katran_capi_smoke PROPERTIES
+    LINKER_LANGUAGE CXX
+)
 
 # Shared library versioning
 #set_target_properties(katran_capi PROPERTIES
