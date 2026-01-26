@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/facebookincubator/katran/katran/capi/go/katran"
+	"github.com/tehnerd/vatran/go/katran"
 )
 
 // Example_basicUsage demonstrates basic LoadBalancer creation and VIP management.
