@@ -1,10 +1,8 @@
 package handlers
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"net/http"
-	"strings"
 
 	"github.com/tehnerd/vatran/go/katran"
 	"github.com/tehnerd/vatran/go/server/lb"
@@ -219,12 +217,4 @@ func requestToConfig(req *models.CreateLBRequest) *katran.Config {
 	cfg.HashFunc = katran.HashFunction(req.HashFunc)
 
 	return cfg
-}
-
-// parseMAC parses a MAC address string (e.g., "aa:bb:cc:dd:ee:ff") to bytes.
-func parseMAC(mac string) ([]byte, error) {
-	// Remove common separators
-	mac = strings.ReplaceAll(mac, ":", "")
-	mac = strings.ReplaceAll(mac, "-", "")
-	return hex.DecodeString(mac)
 }
