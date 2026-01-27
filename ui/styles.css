@@ -1,0 +1,259 @@
+:root {
+  color-scheme: light;
+  --bg: #f6f4ef;
+  --panel: #ffffff;
+  --ink: #1b1a17;
+  --muted: #6a625a;
+  --accent: #d97757;
+  --accent-2: #2f4858;
+  --ok: #2f9e44;
+  --bad: #d9480f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Space Grotesk", "Work Sans", system-ui, sans-serif;
+  background: radial-gradient(circle at top left, #efe7dd 0%, #f6f4ef 45%, #f7f1e6 100%);
+  color: var(--ink);
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  background: var(--panel);
+  border-bottom: 1px solid #e6e0d7;
+}
+
+nav a {
+  color: var(--ink);
+  text-decoration: none;
+  margin-right: 16px;
+  font-weight: 600;
+}
+
+nav a.active {
+  color: var(--accent);
+}
+
+main {
+  padding: 24px;
+  display: grid;
+  gap: 20px;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid #ece6dc;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 8px 18px rgba(47, 41, 34, 0.08);
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f2ebe2;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--bad);
+}
+
+.dot.ok {
+  background: var(--ok);
+}
+
+.btn {
+  border: none;
+  background: var(--accent-2);
+  color: white;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn.secondary {
+  background: var(--accent);
+}
+
+.btn.ghost {
+  background: transparent;
+  border: 1px solid #d7cfc5;
+  color: var(--ink);
+}
+
+.btn.danger {
+  background: #c44536;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 8px 6px;
+  border-bottom: 1px solid #eee5d7;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.form-row {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.field input,
+.field select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #ddd4c8;
+  background: #fffaf3;
+  font: inherit;
+  color: var(--ink);
+}
+
+.field.checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.inline-input {
+  width: 100px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #ddd4c8;
+  background: #fffaf3;
+  font: inherit;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.error {
+  color: #b23a2f;
+  font-weight: 600;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.toast-stack {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: grid;
+  gap: 10px;
+  z-index: 999;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e4d8ca;
+  background: #fffaf3;
+  color: var(--ink);
+  box-shadow: 0 10px 20px rgba(45, 35, 24, 0.12);
+  min-width: 220px;
+}
+
+.toast.success {
+  border-color: rgba(47, 158, 68, 0.35);
+}
+
+.toast.error {
+  border-color: rgba(217, 72, 15, 0.4);
+}
+
+.toast-close {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+@media (max-width: 720px) {
+  header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .toast-stack {
+    left: 16px;
+    right: 16px;
+  }
+}
