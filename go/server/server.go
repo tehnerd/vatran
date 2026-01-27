@@ -62,7 +62,7 @@ func (s *Server) Start() error {
 	}
 
 	// Register routes
-	RegisterRoutes(s.mux)
+	RegisterRoutes(s.mux, s.config)
 
 	// Build handler chain with middleware
 	var handler http.Handler = s.mux

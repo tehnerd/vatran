@@ -41,6 +41,12 @@ type Config struct {
 	EnableLogging bool
 	// EnableRecovery enables panic recovery middleware (default: true).
 	EnableRecovery bool
+	// StaticDir is the path to the directory containing static files for the SPA.
+	// If empty, no static files are served.
+	StaticDir string
+	// BPFProgDir is the base directory for BPF program files.
+	// BalancerProgPath and HealthcheckingProgPath in requests are relative to this directory.
+	BPFProgDir string
 }
 
 // DefaultConfig returns a new Config with default values.

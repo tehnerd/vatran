@@ -227,13 +227,13 @@
           </div>
         </div>
         <nav>
-          <${NavLink} to="/" end className={({ isActive }) => (isActive ? "active" : "")}>
+          <${NavLink} to="/" end className=${({ isActive }) => (isActive ? "active" : "")}>
             Dashboard
           </${NavLink}>
-          <${NavLink} to="/stats/global" className={({ isActive }) => (isActive ? "active" : "")}>
+          <${NavLink} to="/stats/global" className=${({ isActive }) => (isActive ? "active" : "")}>
             Global stats
           </${NavLink}>
-          <${NavLink} to="/stats/real" className={({ isActive }) => (isActive ? "active" : "")}>
+          <${NavLink} to="/stats/real" className=${({ isActive }) => (isActive ? "active" : "")}>
             Per-real stats
           </${NavLink}>
         </nav>

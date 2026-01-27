@@ -2,6 +2,9 @@ package server
 
 import (
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/tehnerd/vatran/go/server/handlers"
 	"github.com/tehnerd/vatran/go/server/models"
@@ -16,9 +19,10 @@ const (
 //
 // Parameters:
 //   - mux: The http.ServeMux to register routes on.
-func RegisterRoutes(mux *http.ServeMux) {
+//   - config: The server configuration.
+func RegisterRoutes(mux *http.ServeMux, config *Config) {
 	// Initialize handlers
-	lifecycleHandler := handlers.NewLifecycleHandler()
+	lifecycleHandler := handlers.NewLifecycleHandler(config.BPFProgDir)
 	vipHandler := handlers.NewVIPHandler()
 	realHandler := handlers.NewRealHandler()
 	statsHandler := handlers.NewStatsHandler()
@@ -114,6 +118,11 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc(APIBasePath+"/utils/map-fd", utilsHandler.HandleBPFMapFD)
 	mux.HandleFunc(APIBasePath+"/utils/global-lru-map-fds", utilsHandler.HandleGlobalLRUMapsFDs)
 	mux.HandleFunc(APIBasePath+"/utils/src-ip-encap", utilsHandler.HandleAddSrcIPForPcktEncap)
+
+	// Serve SPA static files if staticDir is configured
+	if config.StaticDir != "" {
+		mux.Handle("/", newSPAHandler(config.StaticDir))
+	}
 }
 
 // handleHealth handles the health check endpoint.
@@ -123,4 +132,66 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	models.WriteSuccess(w, map[string]string{"status": "ok"})
+}
+
+// spaHandler serves a Single Page Application (SPA).
+// It serves static files from the configured directory and falls back to index.html
+// for any path that doesn't match a static file (supporting client-side routing).
+type spaHandler struct {
+	staticDir string
+	fileServer http.Handler
+}
+
+// newSPAHandler creates a new SPA handler.
+//
+// Parameters:
+//   - staticDir: The directory containing the SPA static files.
+//
+// Returns an http.Handler that serves the SPA.
+func newSPAHandler(staticDir string) http.Handler {
+	return &spaHandler{
+		staticDir:  staticDir,
+		fileServer: http.FileServer(http.Dir(staticDir)),
+	}
+}
+
+// ServeHTTP implements the http.Handler interface for spaHandler.
+func (h *spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Clean the path
+	path := filepath.Clean(r.URL.Path)
+
+	// Don't serve API routes through the SPA handler
+	if strings.HasPrefix(path, APIBasePath) {
+		http.NotFound(w, r)
+		return
+	}
+
+	// Sanitize the path to prevent directory traversal
+	cleanBase := filepath.Clean(h.staticDir)
+	fullPath := filepath.Clean(filepath.Join(cleanBase, path))
+
+	// Ensure the path is within staticDir
+	if !strings.HasPrefix(fullPath, cleanBase+string(filepath.Separator)) && fullPath != cleanBase {
+		http.NotFound(w, r)
+		return
+	}
+
+	info, err := os.Stat(fullPath)
+
+	// If the file exists and is not a directory, serve it
+	if err == nil && !info.IsDir() {
+		h.fileServer.ServeHTTP(w, r)
+		return
+	}
+
+	// For thirdparty dependencies, return 404 if file doesn't exist
+	// (don't fall back to index.html for these paths)
+	if strings.HasPrefix(path, "/thirdparty/") {
+		http.NotFound(w, r)
+		return
+	}
+
+	// For any other path (including directories and non-existent files),
+	// serve index.html for client-side routing
+	http.ServeFile(w, r, filepath.Join(h.staticDir, "index.html"))
 }

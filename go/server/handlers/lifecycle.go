@@ -2,24 +2,64 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
+	"path/filepath"
+	"strings"
 
 	"github.com/tehnerd/vatran/go/katran"
 	"github.com/tehnerd/vatran/go/server/lb"
 	"github.com/tehnerd/vatran/go/server/models"
 )
 
+// ErrPathTraversal is returned when a path escapes the base directory.
+var ErrPathTraversal = errors.New("path traversal attempt detected")
+
+// sanitizePath joins basePath with userPath and ensures the result does not escape basePath.
+// Returns the sanitized absolute path or an error if traversal is detected.
+//
+// Parameters:
+//   - basePath: The trusted base directory path.
+//   - userPath: The untrusted user-provided path component.
+//
+// Returns the sanitized path or ErrPathTraversal if the path escapes basePath.
+func sanitizePath(basePath, userPath string) (string, error) {
+	// Clean the base path to ensure consistent comparison
+	cleanBase := filepath.Clean(basePath)
+
+	// Join and clean the full path
+	fullPath := filepath.Clean(filepath.Join(cleanBase, userPath))
+
+	// Verify the result is within the base directory
+	// We add a trailing separator to ensure we match the directory, not a prefix
+	if !strings.HasPrefix(fullPath, cleanBase+string(filepath.Separator)) && fullPath != cleanBase {
+		return "", ErrPathTraversal
+	}
+
+	return fullPath, nil
+}
+
+const (
+	// bpfFSPath is the standard BPF filesystem path.
+	bpfFSPath = "/sys/fs/bpf"
+)
+
 // LifecycleHandler handles load balancer lifecycle operations.
 type LifecycleHandler struct {
-	manager *lb.Manager
+	manager    *lb.Manager
+	bpfProgDir string
 }
 
 // NewLifecycleHandler creates a new LifecycleHandler.
 //
+// Parameters:
+//   - bpfProgDir: Base directory for BPF program files.
+//
 // Returns a new LifecycleHandler instance.
-func NewLifecycleHandler() *LifecycleHandler {
+func NewLifecycleHandler(bpfProgDir string) *LifecycleHandler {
 	return &LifecycleHandler{
-		manager: lb.GetManager(),
+		manager:    lb.GetManager(),
+		bpfProgDir: bpfProgDir,
 	}
 }
 
@@ -36,7 +76,7 @@ func (h *LifecycleHandler) HandleCreate(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	cfg := requestToConfig(&req)
+	cfg := requestToConfig(&req, h.bpfProgDir)
 
 	if err := h.manager.Create(cfg); err != nil {
 		models.WriteKatranError(w, err)
@@ -116,10 +156,22 @@ func (h *LifecycleHandler) HandleReload(w http.ResponseWriter, r *http.Request) 
 
 	var cfg *katran.Config
 	if req.Config != nil {
-		cfg = requestToConfig(req.Config)
+		cfg = requestToConfig(req.Config, h.bpfProgDir)
 	}
 
-	if err := h.manager.ReloadBalancerProg(req.Path, cfg); err != nil {
+	// Resolve reload path relative to bpfProgDir if not absolute
+	reloadPath := req.Path
+	if reloadPath != "" && !filepath.IsAbs(reloadPath) && h.bpfProgDir != "" {
+		var err error
+		reloadPath, err = sanitizePath(h.bpfProgDir, reloadPath)
+		if err != nil {
+			models.WriteError(w, http.StatusBadRequest,
+				models.NewInvalidRequestError("invalid reload path: "+err.Error()))
+			return
+		}
+	}
+
+	if err := h.manager.ReloadBalancerProg(reloadPath, cfg); err != nil {
 		models.WriteKatranError(w, err)
 		return
 	}
@@ -128,16 +180,48 @@ func (h *LifecycleHandler) HandleReload(w http.ResponseWriter, r *http.Request) 
 }
 
 // requestToConfig converts a CreateLBRequest to a katran.Config.
-func requestToConfig(req *models.CreateLBRequest) *katran.Config {
+//
+// Parameters:
+//   - req: The CreateLBRequest to convert.
+//   - bpfProgDir: Base directory for BPF program files.
+//
+// BalancerProgPath and HealthcheckingProgPath are resolved relative to bpfProgDir
+// if they are not absolute paths and bpfProgDir is set.
+// RootMapPath is resolved relative to /sys/fs/bpf/ if it is not an absolute path.
+func requestToConfig(req *models.CreateLBRequest, bpfProgDir string) *katran.Config {
 	cfg := katran.NewConfig()
 
 	cfg.MainInterface = req.MainInterface
 	cfg.V4TunInterface = req.V4TunInterface
 	cfg.V6TunInterface = req.V6TunInterface
 	cfg.HCInterface = req.HCInterface
+
+	// Resolve BalancerProgPath relative to bpfProgDir
 	cfg.BalancerProgPath = req.BalancerProgPath
+	if cfg.BalancerProgPath != "" && !filepath.IsAbs(cfg.BalancerProgPath) && bpfProgDir != "" {
+		if sanitized, err := sanitizePath(bpfProgDir, cfg.BalancerProgPath); err == nil {
+			cfg.BalancerProgPath = sanitized
+		}
+		// If sanitization fails, keep the original path - it will fail at file access
+	}
+
+	// Resolve HealthcheckingProgPath relative to bpfProgDir
 	cfg.HealthcheckingProgPath = req.HealthcheckingProgPath
+	if cfg.HealthcheckingProgPath != "" && !filepath.IsAbs(cfg.HealthcheckingProgPath) && bpfProgDir != "" {
+		if sanitized, err := sanitizePath(bpfProgDir, cfg.HealthcheckingProgPath); err == nil {
+			cfg.HealthcheckingProgPath = sanitized
+		}
+		// If sanitization fails, keep the original path - it will fail at file access
+	}
+
+	// Resolve RootMapPath relative to /sys/fs/bpf/
 	cfg.RootMapPath = req.RootMapPath
+	if cfg.RootMapPath != "" && !filepath.IsAbs(cfg.RootMapPath) {
+		if sanitized, err := sanitizePath(bpfFSPath, cfg.RootMapPath); err == nil {
+			cfg.RootMapPath = sanitized
+		}
+		// If sanitization fails, keep the original path - it will fail at file access
+	}
 	cfg.KatranSrcV4 = req.KatranSrcV4
 	cfg.KatranSrcV6 = req.KatranSrcV6
 

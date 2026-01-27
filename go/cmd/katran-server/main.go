@@ -22,6 +22,8 @@ func main() {
 	idleTimeout := flag.Int("idle-timeout", 120, "Idle timeout in seconds")
 	disableLogging := flag.Bool("no-logging", false, "Disable request logging")
 	disableRecovery := flag.Bool("no-recovery", false, "Disable panic recovery")
+	staticDir := flag.String("static-dir", "", "Path to static files directory for SPA (e.g., ui/dist)")
+	bpfProgDir := flag.String("bpf-prog-dir", "", "Base directory for BPF program files")
 
 	flag.Parse()
 
@@ -39,6 +41,9 @@ func main() {
 	if *corsOrigins != "" {
 		config.AllowedOrigins = strings.Split(*corsOrigins, ",")
 	}
+
+	config.StaticDir = *staticDir
+	config.BPFProgDir = *bpfProgDir
 
 	// Configure TLS if cert and key provided
 	if *tlsCert != "" && *tlsKey != "" {
