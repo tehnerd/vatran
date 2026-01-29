@@ -573,3 +573,164 @@ func (c *Client) Health() error {
 	}
 	return c.doRequest(http.MethodGet, "/health", nil, &resp)
 }
+
+// ExportConfig represents the exported load balancer configuration.
+type ExportConfig struct {
+	Server       ServerConfig                `json:"server"`
+	LB           LBConfig                    `json:"lb"`
+	TargetGroups map[string][]Real           `json:"target_groups"`
+	VIPs         []ExportVIP                 `json:"vips"`
+}
+
+// ServerConfig represents server configuration.
+type ServerConfig struct {
+	Host           string   `json:"host"`
+	Port           int      `json:"port"`
+	ReadTimeout    int      `json:"read_timeout"`
+	WriteTimeout   int      `json:"write_timeout"`
+	IdleTimeout    int      `json:"idle_timeout"`
+	EnableCORS     bool     `json:"enable_cors"`
+	AllowedOrigins []string `json:"allowed_origins"`
+	EnableLogging  bool     `json:"enable_logging"`
+	EnableRecovery bool     `json:"enable_recovery"`
+	StaticDir      string   `json:"static_dir"`
+	BPFProgDir     string   `json:"bpf_prog_dir"`
+}
+
+// LBConfig represents load balancer configuration.
+type LBConfig struct {
+	Interfaces    InterfacesConfig    `json:"interfaces"`
+	Programs      ProgramsConfig      `json:"programs"`
+	RootMap       RootMapConfig       `json:"root_map"`
+	MAC           MACConfig           `json:"mac"`
+	Capacity      CapacityConfig      `json:"capacity"`
+	CPU           CPUConfig           `json:"cpu"`
+	XDP           XDPConfig           `json:"xdp"`
+	Encapsulation EncapsulationConfig `json:"encapsulation"`
+	Features      FeaturesConfig      `json:"features"`
+	HashFunction  string              `json:"hash_function"`
+}
+
+// InterfacesConfig represents interface configuration.
+type InterfacesConfig struct {
+	Main        string `json:"main"`
+	Healthcheck string `json:"healthcheck"`
+	V4Tunnel    string `json:"v4_tunnel"`
+	V6Tunnel    string `json:"v6_tunnel"`
+}
+
+// ProgramsConfig represents BPF programs configuration.
+type ProgramsConfig struct {
+	Balancer    string `json:"balancer"`
+	Healthcheck string `json:"healthcheck"`
+}
+
+// RootMapConfig represents root map configuration.
+type RootMapConfig struct {
+	Enabled  bool   `json:"enabled"`
+	Path     string `json:"path"`
+	Position int    `json:"position"`
+}
+
+// MACConfig represents MAC address configuration.
+type MACConfig struct {
+	Default string `json:"default"`
+	Local   string `json:"local"`
+}
+
+// CapacityConfig represents capacity configuration.
+type CapacityConfig struct {
+	MaxVIPs       int `json:"max_vips"`
+	MaxReals      int `json:"max_reals"`
+	CHRingSize    int `json:"ch_ring_size"`
+	LRUSize       int `json:"lru_size"`
+	GlobalLRUSize int `json:"global_lru_size"`
+	MaxLPMSrc     int `json:"max_lpm_src"`
+	MaxDecapDst   int `json:"max_decap_dst"`
+}
+
+// CPUConfig represents CPU configuration.
+type CPUConfig struct {
+	ForwardingCores []int `json:"forwarding_cores"`
+	NUMANodes       []int `json:"numa_nodes"`
+}
+
+// XDPConfig represents XDP configuration.
+type XDPConfig struct {
+	AttachFlags int `json:"attach_flags"`
+	Priority    int `json:"priority"`
+}
+
+// EncapsulationConfig represents encapsulation configuration.
+type EncapsulationConfig struct {
+	SrcV4 string `json:"src_v4"`
+	SrcV6 string `json:"src_v6"`
+}
+
+// FeaturesConfig represents features configuration.
+type FeaturesConfig struct {
+	EnableHealthcheck   bool `json:"enable_healthcheck"`
+	TunnelBasedHCEncap  bool `json:"tunnel_based_hc_encap"`
+	FlowDebug           bool `json:"flow_debug"`
+	EnableCIDV3         bool `json:"enable_cid_v3"`
+	MemlockUnlimited    bool `json:"memlock_unlimited"`
+	CleanupOnShutdown   bool `json:"cleanup_on_shutdown"`
+	Testing             bool `json:"testing"`
+}
+
+// ExportVIP represents a VIP in the exported configuration.
+type ExportVIP struct {
+	Address     string `json:"address"`
+	Port        uint16 `json:"port"`
+	Proto       string `json:"proto"`
+	TargetGroup string `json:"target_group"`
+	Flags       uint32 `json:"flags"`
+}
+
+// ExportConfigYAML exports the current running configuration as YAML.
+//
+// Returns:
+//   - The configuration as a YAML string.
+//   - An error if the request fails.
+func (c *Client) ExportConfigYAML() (string, error) {
+	req, err := http.NewRequest(http.MethodGet, c.baseURL+"/api/v1/config/export", nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Accept", "application/x-yaml")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response: %w", err)
+	}
+
+	// Check if response is an error (JSON error response)
+	if resp.StatusCode != http.StatusOK {
+		var apiResp Response
+		if err := json.Unmarshal(body, &apiResp); err == nil && apiResp.Error != nil {
+			return "", apiResp.Error
+		}
+		return "", fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	return string(body), nil
+}
+
+// ExportConfigJSON exports the current running configuration as JSON.
+//
+// Returns:
+//   - The ExportConfig struct containing the configuration.
+//   - An error if the request fails.
+func (c *Client) ExportConfigJSON() (*ExportConfig, error) {
+	var config ExportConfig
+	if err := c.doRequest(http.MethodGet, "/api/v1/config/export/json", nil, &config); err != nil {
+		return nil, err
+	}
+	return &config, nil
+}

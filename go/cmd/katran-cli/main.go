@@ -11,9 +11,11 @@
 //	stats   - View statistics
 //	mac     - Manage MAC address
 //	hc      - Manage healthcheck destinations
+//	config  - Export configuration
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -60,6 +62,8 @@ func main() {
 		err = handleHC(c, cmdArgs)
 	case "health":
 		err = handleHealth(c)
+	case "config":
+		err = handleConfig(c, cmdArgs)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n", cmd)
 		printUsage()
@@ -88,6 +92,7 @@ Commands:
   stats   View statistics (vip, lru, xdp, decap, etc.)
   mac     Manage default router MAC address (show, set)
   hc      Manage healthcheck destinations (list, add, remove)
+  config  Export configuration (export)
   health  Check server health
 
 Examples:
@@ -98,6 +103,9 @@ Examples:
   katran-cli stats vip 10.0.0.1 80 tcp --watch
   katran-cli mac show
   katran-cli hc list
+  katran-cli config export
+  katran-cli config export --format json
+  katran-cli config export --output config.yaml
 `)
 }
 
@@ -798,5 +806,60 @@ func handleHealth(c *client.Client) error {
 		return fmt.Errorf("server unhealthy: %v", err)
 	}
 	fmt.Println("Server is healthy")
+	return nil
+}
+
+// handleConfig handles configuration commands.
+func handleConfig(c *client.Client, args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("usage: config <export> [args]")
+	}
+
+	switch args[0] {
+	case "export":
+		return configExport(c, args[1:])
+	default:
+		return fmt.Errorf("unknown config command: %s", args[0])
+	}
+}
+
+func configExport(c *client.Client, args []string) error {
+	fs := flag.NewFlagSet("config export", flag.ExitOnError)
+	format := fs.String("format", "yaml", "Output format: yaml or json")
+	output := fs.String("output", "", "Output file (default: stdout)")
+	fs.Parse(args)
+
+	var content string
+	var err error
+
+	switch *format {
+	case "yaml", "yml":
+		content, err = c.ExportConfigYAML()
+		if err != nil {
+			return err
+		}
+	case "json":
+		config, err := c.ExportConfigJSON()
+		if err != nil {
+			return err
+		}
+		jsonBytes, err := json.MarshalIndent(config, "", "  ")
+		if err != nil {
+			return fmt.Errorf("failed to marshal config: %w", err)
+		}
+		content = string(jsonBytes)
+	default:
+		return fmt.Errorf("invalid format: %s (use yaml or json)", *format)
+	}
+
+	if *output != "" {
+		if err := os.WriteFile(*output, []byte(content), 0644); err != nil {
+			return fmt.Errorf("failed to write file: %w", err)
+		}
+		fmt.Printf("Configuration exported to %s\n", *output)
+	} else {
+		fmt.Println(content)
+	}
+
 	return nil
 }
