@@ -105,9 +105,9 @@ func (h *VIPHandler) handleDelVIP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req models.VIPRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeVIPRequest(r, &req); err != nil {
 		models.WriteError(w, http.StatusBadRequest,
-			models.NewInvalidRequestError("invalid request body: "+err.Error()))
+			models.NewInvalidRequestError("invalid request: "+err.Error()))
 		return
 	}
 

@@ -24,10 +24,31 @@
         method: options.method || "GET",
         headers: { "Content-Type": "application/json" },
       };
-      if (options.body !== undefined) {
-        init.body = JSON.stringify(options.body);
+      let url = `${api.base}${path}`;
+      if (options.body !== undefined && options.body !== null) {
+        if (init.method === "GET") {
+          const params = new URLSearchParams();
+          Object.entries(options.body).forEach(([key, value]) => {
+            if (value === undefined || value === null) return;
+            if (Array.isArray(value)) {
+              value.forEach((item) => params.append(key, String(item)));
+              return;
+            }
+            if (typeof value === "object") {
+              params.set(key, JSON.stringify(value));
+              return;
+            }
+            params.set(key, String(value));
+          });
+          const query = params.toString();
+          if (query) {
+            url += `${url.includes("?") ? "&" : "?"}${query}`;
+          }
+        } else {
+          init.body = JSON.stringify(options.body);
+        }
       }
-      const res = await fetch(`${api.base}${path}`, init);
+      const res = await fetch(url, init);
       let payload;
       try {
         payload = await res.json();

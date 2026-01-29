@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/tehnerd/vatran/go/katran"
@@ -41,9 +40,9 @@ func (h *StatsHandler) HandleVIPStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req models.VIPRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeVIPRequest(r, &req); err != nil {
 		models.WriteError(w, http.StatusBadRequest,
-			models.NewInvalidRequestError("invalid request body: "+err.Error()))
+			models.NewInvalidRequestError("invalid request: "+err.Error()))
 		return
 	}
 
@@ -80,9 +79,9 @@ func (h *StatsHandler) HandleVIPDecapStats(w http.ResponseWriter, r *http.Reques
 	}
 
 	var req models.VIPRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeVIPRequest(r, &req); err != nil {
 		models.WriteError(w, http.StatusBadRequest,
-			models.NewInvalidRequestError("invalid request body: "+err.Error()))
+			models.NewInvalidRequestError("invalid request: "+err.Error()))
 		return
 	}
 
@@ -119,9 +118,9 @@ func (h *StatsHandler) HandleRealStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req models.GetRealStatsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeRealStatsRequest(r, &req); err != nil {
 		models.WriteError(w, http.StatusBadRequest,
-			models.NewInvalidRequestError("invalid request body: "+err.Error()))
+			models.NewInvalidRequestError("invalid request: "+err.Error()))
 		return
 	}
 
@@ -618,9 +617,9 @@ func (h *StatsHandler) HandleBPFMapStats(w http.ResponseWriter, r *http.Request)
 	}
 
 	var req models.GetBPFMapStatsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeBPFMapStatsRequest(r, &req); err != nil {
 		models.WriteError(w, http.StatusBadRequest,
-			models.NewInvalidRequestError("invalid request body: "+err.Error()))
+			models.NewInvalidRequestError("invalid request: "+err.Error()))
 		return
 	}
 

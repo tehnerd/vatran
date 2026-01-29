@@ -250,14 +250,10 @@ Delete a VIP.
 
 Get VIP flags.
 
-**Request Body:**
-```json
-{
-  "address": "10.0.0.1",
-  "port": 80,
-  "proto": 6
-}
-```
+**Query Parameters:**
+- address (string)
+- port (integer)
+- proto (integer)
 
 **Response:**
 ```json
@@ -320,14 +316,10 @@ Change the hash function for a VIP.
 
 Get all real servers for a VIP.
 
-**Request Body:**
-```json
-{
-  "address": "10.0.0.1",
-  "port": 80,
-  "proto": 6
-}
-```
+**Query Parameters:**
+- address (string)
+- port (integer)
+- proto (integer)
 
 **Response:**
 ```json
@@ -441,12 +433,8 @@ Batch modify real servers for a VIP.
 
 Get the internal index for a real server.
 
-**Request Body:**
-```json
-{
-  "address": "192.168.1.1"
-}
-```
+**Query Parameters:**
+- address (string)
 
 **Response:**
 ```json
@@ -486,14 +474,10 @@ Modify real server flags.
 
 Get VIP statistics.
 
-**Request Body:**
-```json
-{
-  "address": "10.0.0.1",
-  "port": 80,
-  "proto": 6
-}
-```
+**Query Parameters:**
+- address (string)
+- port (integer)
+- proto (integer)
 
 **Response:**
 ```json
@@ -510,14 +494,10 @@ Get VIP statistics.
 
 Get VIP decapsulation statistics.
 
-**Request Body:**
-```json
-{
-  "address": "10.0.0.1",
-  "port": 80,
-  "proto": 6
-}
-```
+**Query Parameters:**
+- address (string)
+- port (integer)
+- proto (integer)
 
 **Response:**
 ```json
@@ -534,12 +514,8 @@ Get VIP decapsulation statistics.
 
 Get real server statistics.
 
-**Request Body:**
-```json
-{
-  "index": 1
-}
-```
+**Query Parameters:**
+- index (integer)
 
 **Response:**
 ```json
@@ -826,12 +802,8 @@ Get healthcheck program statistics.
 
 Get BPF map statistics.
 
-**Request Body:**
-```json
-{
-  "map_name": "vip_map"
-}
-```
+**Query Parameters:**
+- map_name (string)
 
 **Response:**
 ```json
