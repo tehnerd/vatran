@@ -8,6 +8,7 @@ import (
 
 	"github.com/tehnerd/vatran/go/server/handlers"
 	"github.com/tehnerd/vatran/go/server/models"
+	"github.com/tehnerd/vatran/go/server/types"
 )
 
 const (
@@ -33,6 +34,9 @@ func RegisterRoutes(mux *http.ServeMux, config *Config) {
 	lruHandler := handlers.NewLRUHandler()
 	monitorHandler := handlers.NewMonitorHandler()
 	utilsHandler := handlers.NewUtilsHandler()
+	configHandler := handlers.NewConfigHandler(config)
+	// Set up the config exporter for YAML export
+	configHandler.SetConfigExporter(createConfigExporter(config))
 
 	// Health check endpoint (not versioned)
 	mux.HandleFunc("/health", handleHealth)
@@ -119,6 +123,10 @@ func RegisterRoutes(mux *http.ServeMux, config *Config) {
 	mux.HandleFunc(APIBasePath+"/utils/global-lru-map-fds", utilsHandler.HandleGlobalLRUMapsFDs)
 	mux.HandleFunc(APIBasePath+"/utils/src-ip-encap", utilsHandler.HandleAddSrcIPForPcktEncap)
 
+	// Config export endpoints
+	mux.HandleFunc(APIBasePath+"/config/export", configHandler.HandleExportConfig)
+	mux.HandleFunc(APIBasePath+"/config/export/json", configHandler.HandleExportConfigJSON)
+
 	// Serve SPA static files if staticDir is configured
 	if config.StaticDir != "" {
 		mux.Handle("/", newSPAHandler(config.StaticDir))
@@ -194,4 +202,11 @@ func (h *spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// For any other path (including directories and non-existent files),
 	// serve index.html for client-side routing
 	http.ServeFile(w, r, filepath.Join(h.staticDir, "index.html"))
+}
+
+// createConfigExporter creates a config exporter function for the given server config.
+func createConfigExporter(config *Config) types.ConfigExporter {
+	return types.ConfigExporterFunc(func(katranCfg *types.KatranConfigExport, vips []types.VIPWithBackends) ([]byte, error) {
+		return ExportConfigAsYAML(config, katranCfg, vips)
+	})
 }

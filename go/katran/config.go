@@ -140,11 +140,11 @@ func NewConfig() *Config {
 		MaxDecapDst:        6,
 		GlobalLRUSize:      100000,
 		EnableHC:           true,
-		TunnelBasedHCEncap: true,
+		TunnelBasedHCEncap: false,
 		MemlockUnlimited:   true,
 		CleanupOnShutdown:  true,
 		Priority:           2307,
-		HashFunc:           HashMaglev,
+		HashFunc:           HashMaglevV2,
 	}
 }
 
@@ -162,6 +162,8 @@ type cConfig struct {
 	katranSrcV6      *C.char
 	forwardingCores  *C.int32_t
 	numaNodes        *C.int32_t
+	defaultMAC       *C.uint8_t
+	localMAC         *C.uint8_t
 }
 
 // toC converts a Go Config to a C katran_config_t.
@@ -210,12 +212,22 @@ func (cfg *Config) toC() *cConfig {
 		cc.config.katran_src_v6 = cc.katranSrcV6
 	}
 
-	// MAC addresses
+	// MAC addresses - must be C-allocated to avoid CGO pointer issues
 	if len(cfg.DefaultMAC) == 6 {
-		cc.config.default_mac = (*C.uint8_t)(unsafe.Pointer(&cfg.DefaultMAC[0]))
+		cc.defaultMAC = (*C.uint8_t)(C.malloc(6))
+		macSlice := unsafe.Slice(cc.defaultMAC, 6)
+		for i := 0; i < 6; i++ {
+			macSlice[i] = C.uint8_t(cfg.DefaultMAC[i])
+		}
+		cc.config.default_mac = cc.defaultMAC
 	}
 	if len(cfg.LocalMAC) == 6 {
-		cc.config.local_mac = (*C.uint8_t)(unsafe.Pointer(&cfg.LocalMAC[0]))
+		cc.localMAC = (*C.uint8_t)(C.malloc(6))
+		macSlice := unsafe.Slice(cc.localMAC, 6)
+		for i := 0; i < 6; i++ {
+			macSlice[i] = C.uint8_t(cfg.LocalMAC[i])
+		}
+		cc.config.local_mac = cc.localMAC
 	}
 
 	// Numeric fields
@@ -300,6 +312,12 @@ func (cc *cConfig) free() {
 	}
 	if cc.numaNodes != nil {
 		C.free(unsafe.Pointer(cc.numaNodes))
+	}
+	if cc.defaultMAC != nil {
+		C.free(unsafe.Pointer(cc.defaultMAC))
+	}
+	if cc.localMAC != nil {
+		C.free(unsafe.Pointer(cc.localMAC))
 	}
 }
 

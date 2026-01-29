@@ -11,6 +11,7 @@ import (
 type Manager struct {
 	mu          sync.RWMutex
 	lb          *katran.LoadBalancer
+	config      *katran.Config
 	initialized bool
 	ready       bool
 }
@@ -54,6 +55,7 @@ func (m *Manager) Create(cfg *katran.Config) error {
 	}
 
 	m.lb = lb
+	m.config = cfg
 	m.initialized = true
 	m.ready = false
 	return nil
@@ -66,6 +68,15 @@ func (m *Manager) Get() (*katran.LoadBalancer, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.lb, m.initialized
+}
+
+// GetConfig returns the configuration used to create the LoadBalancer.
+//
+// Returns the Config and a boolean indicating if it was found.
+func (m *Manager) GetConfig() (*katran.Config, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.config, m.initialized
 }
 
 // Close closes the LoadBalancer instance and releases all resources.
@@ -84,6 +95,7 @@ func (m *Manager) Close() error {
 
 	err := m.lb.Close()
 	m.lb = nil
+	m.config = nil
 	m.initialized = false
 	m.ready = false
 	return err

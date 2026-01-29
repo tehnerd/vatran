@@ -9,9 +9,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
+	"github.com/tehnerd/vatran/go/katran"
+	"github.com/tehnerd/vatran/go/server/lb"
 	"github.com/tehnerd/vatran/go/server/middleware"
 )
 
@@ -162,6 +165,189 @@ func (s *Server) RunWithGracefulShutdown() error {
 	defer cancel()
 
 	return s.Stop(ctx)
+}
+
+// InitFromConfig initializes the load balancer from a FullConfig.
+// This creates the LB, loads and attaches BPF programs, and configures all VIPs with their backends.
+//
+// Parameters:
+//   - cfg: The full configuration loaded from YAML.
+//
+// Returns an error if initialization fails.
+func (s *Server) InitFromConfig(cfg *FullConfig) error {
+	manager := lb.GetManager()
+
+	// Build katran config from YAML config
+	katranCfg := s.buildKatranConfig(cfg)
+
+	// Create LB
+	log.Println("Creating load balancer...")
+	if err := manager.Create(katranCfg); err != nil {
+		return fmt.Errorf("failed to create load balancer: %w", err)
+	}
+
+	// Load BPF programs
+	log.Println("Loading BPF programs...")
+	if err := manager.LoadBPFProgs(); err != nil {
+		return fmt.Errorf("failed to load BPF programs: %w", err)
+	}
+
+	// Attach BPF programs
+	log.Println("Attaching BPF programs...")
+	if err := manager.AttachBPFProgs(); err != nil {
+		return fmt.Errorf("failed to attach BPF programs: %w", err)
+	}
+
+	// Get LB instance for VIP/Real operations
+	lbInstance, ok := manager.Get()
+	if !ok {
+		return fmt.Errorf("load balancer not initialized after creation")
+	}
+
+	// Create VIPs and add backends from target groups
+	for i, vipCfg := range cfg.VIPs {
+		vip := katran.VIPKey{
+			Address: vipCfg.Address,
+			Port:    vipCfg.Port,
+			Proto:   ProtoToNumber(vipCfg.Proto),
+		}
+
+		log.Printf("Adding VIP %s:%d/%s...", vipCfg.Address, vipCfg.Port, vipCfg.Proto)
+		if err := lbInstance.AddVIP(vip, vipCfg.Flags); err != nil {
+			return fmt.Errorf("failed to add VIP[%d] %s:%d: %w", i, vipCfg.Address, vipCfg.Port, err)
+		}
+
+		// Add backends from target group
+		backends := cfg.TargetGroups[vipCfg.TargetGroup]
+		if len(backends) > 0 {
+			reals := make([]katran.Real, len(backends))
+			for j, backend := range backends {
+				reals[j] = katran.Real{
+					Address: backend.Address,
+					Weight:  backend.Weight,
+					Flags:   backend.Flags,
+				}
+			}
+
+			log.Printf("  Adding %d backends from target group %q...", len(reals), vipCfg.TargetGroup)
+			if err := lbInstance.ModifyRealsForVIP(katran.ActionAdd, reals, vip); err != nil {
+				return fmt.Errorf("failed to add backends for VIP[%d]: %w", i, err)
+			}
+		}
+	}
+
+	log.Printf("Initialization complete: %d VIPs configured", len(cfg.VIPs))
+	return nil
+}
+
+// buildKatranConfig converts FullConfig to a katran.Config.
+func (s *Server) buildKatranConfig(cfg *FullConfig) *katran.Config {
+	katranCfg := katran.NewConfig()
+
+	lc := &cfg.LB
+	bpfProgDir := cfg.Server.BPFProgDir
+
+	// Interfaces
+	katranCfg.MainInterface = lc.Interfaces.Main
+	if lc.Interfaces.Healthcheck != "" {
+		katranCfg.HCInterface = lc.Interfaces.Healthcheck
+	} else {
+		katranCfg.HCInterface = lc.Interfaces.Main
+	}
+	katranCfg.V4TunInterface = lc.Interfaces.V4Tunnel
+	katranCfg.V6TunInterface = lc.Interfaces.V6Tunnel
+
+	// Programs - resolve relative paths
+	katranCfg.BalancerProgPath = lc.Programs.Balancer
+	if katranCfg.BalancerProgPath != "" && !filepath.IsAbs(katranCfg.BalancerProgPath) && bpfProgDir != "" {
+		katranCfg.BalancerProgPath = filepath.Join(bpfProgDir, katranCfg.BalancerProgPath)
+	}
+	katranCfg.HealthcheckingProgPath = lc.Programs.Healthcheck
+	if katranCfg.HealthcheckingProgPath != "" && !filepath.IsAbs(katranCfg.HealthcheckingProgPath) && bpfProgDir != "" {
+		katranCfg.HealthcheckingProgPath = filepath.Join(bpfProgDir, katranCfg.HealthcheckingProgPath)
+	}
+
+	// Root map
+	if lc.RootMap.Enabled != nil {
+		katranCfg.UseRootMap = *lc.RootMap.Enabled
+	}
+	katranCfg.RootMapPath = lc.RootMap.Path
+	if lc.RootMap.Position > 0 {
+		katranCfg.RootMapPos = lc.RootMap.Position
+	}
+
+	// MAC addresses
+	if mac, err := ParseMAC(lc.MAC.Default); err == nil && len(mac) == 6 {
+		katranCfg.DefaultMAC = mac
+	}
+	if mac, err := ParseMAC(lc.MAC.Local); err == nil && len(mac) == 6 {
+		katranCfg.LocalMAC = mac
+	}
+
+	// Capacity
+	if lc.Capacity.MaxVIPs > 0 {
+		katranCfg.MaxVIPs = lc.Capacity.MaxVIPs
+	}
+	if lc.Capacity.MaxReals > 0 {
+		katranCfg.MaxReals = lc.Capacity.MaxReals
+	}
+	if lc.Capacity.CHRingSize > 0 {
+		katranCfg.CHRingSize = lc.Capacity.CHRingSize
+	}
+	if lc.Capacity.LRUSize > 0 {
+		katranCfg.LRUSize = lc.Capacity.LRUSize
+	}
+	if lc.Capacity.GlobalLRUSize > 0 {
+		katranCfg.GlobalLRUSize = lc.Capacity.GlobalLRUSize
+	}
+	if lc.Capacity.MaxLPMSrc > 0 {
+		katranCfg.MaxLPMSrcSize = lc.Capacity.MaxLPMSrc
+	}
+	if lc.Capacity.MaxDecapDst > 0 {
+		katranCfg.MaxDecapDst = lc.Capacity.MaxDecapDst
+	}
+
+	// CPU
+	if len(lc.CPU.ForwardingCores) > 0 {
+		katranCfg.ForwardingCores = lc.CPU.ForwardingCores
+	}
+	if len(lc.CPU.NUMANodes) > 0 {
+		katranCfg.NUMANodes = lc.CPU.NUMANodes
+	}
+
+	// XDP
+	if lc.XDP.AttachFlags > 0 {
+		katranCfg.XDPAttachFlags = lc.XDP.AttachFlags
+	}
+	if lc.XDP.Priority > 0 {
+		katranCfg.Priority = lc.XDP.Priority
+	}
+
+	// Encapsulation
+	katranCfg.KatranSrcV4 = lc.Encapsulation.SrcV4
+	katranCfg.KatranSrcV6 = lc.Encapsulation.SrcV6
+
+	// Features
+	if lc.Features.EnableHealthcheck != nil {
+		katranCfg.EnableHC = *lc.Features.EnableHealthcheck
+	}
+	if lc.Features.TunnelBasedHCEncap != nil {
+		katranCfg.TunnelBasedHCEncap = *lc.Features.TunnelBasedHCEncap
+	}
+	katranCfg.FlowDebug = lc.Features.FlowDebug
+	katranCfg.EnableCIDV3 = lc.Features.EnableCIDV3
+	if lc.Features.MemlockUnlimited != nil {
+		katranCfg.MemlockUnlimited = *lc.Features.MemlockUnlimited
+	}
+	if lc.Features.CleanupOnShutdown != nil {
+		katranCfg.CleanupOnShutdown = *lc.Features.CleanupOnShutdown
+	}
+	katranCfg.Testing = lc.Features.Testing
+
+	// Hash function
+	katranCfg.HashFunc = katran.HashFunction(HashFunctionToInt(lc.HashFunction))
+
+	return katranCfg
 }
 
 // buildTLSConfig builds the TLS configuration.

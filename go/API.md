@@ -1502,11 +1502,207 @@ Add a source IP for packet encapsulation.
 
 ---
 
+## Configuration Export
+
+### GET /api/v1/config/export
+
+Export the current running configuration as a YAML file. This can be used to save the current state of the load balancer for backup or replication purposes.
+
+**Response:**
+
+Returns a YAML file with Content-Type `application/x-yaml`.
+
+```yaml
+# Katran Server Configuration
+server:
+  host: ""
+  port: 8080
+  read_timeout: 30
+  write_timeout: 30
+  idle_timeout: 120
+  enable_cors: false
+  allowed_origins: []
+  enable_logging: true
+  enable_recovery: true
+  static_dir: ""
+  bpf_prog_dir: "/path/to/bpf"
+
+lb:
+  interfaces:
+    main: "eth0"
+    healthcheck: "eth0"
+    v4_tunnel: ""
+    v6_tunnel: ""
+  programs:
+    balancer: "/path/to/balancer.bpf.o"
+    healthcheck: "/path/to/healthchecking.bpf.o"
+  root_map:
+    enabled: false
+    path: ""
+    position: 2
+  mac:
+    default: "aa:bb:cc:dd:ee:ff"
+    local: ""
+  capacity:
+    max_vips: 512
+    max_reals: 4096
+    ch_ring_size: 65537
+    lru_size: 8000000
+    global_lru_size: 100000
+    max_lpm_src: 3000000
+    max_decap_dst: 6
+  cpu:
+    forwarding_cores: []
+    numa_nodes: []
+  xdp:
+    attach_flags: 0
+    priority: 2307
+  encapsulation:
+    src_v4: ""
+    src_v6: ""
+  features:
+    enable_healthcheck: true
+    tunnel_based_hc_encap: true
+    flow_debug: false
+    enable_cid_v3: false
+    memlock_unlimited: true
+    cleanup_on_shutdown: true
+    testing: false
+  hash_function: "maglev"
+
+target_groups:
+  group-0:
+    - address: "10.0.0.1"
+      weight: 100
+      flags: 0
+    - address: "10.0.0.2"
+      weight: 100
+
+vips:
+  - address: "192.168.1.100"
+    port: 80
+    proto: "tcp"
+    target_group: group-0
+    flags: 0
+```
+
+**Error Response:**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "LB_NOT_INITIALIZED",
+    "message": "Load balancer is not initialized"
+  }
+}
+```
+
+### GET /api/v1/config/export/json
+
+Export the current running configuration as JSON. Same data as the YAML export but in JSON format.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "server": {
+      "host": "",
+      "port": 8080,
+      "read_timeout": 30,
+      "write_timeout": 30,
+      "idle_timeout": 120,
+      "enable_cors": false,
+      "allowed_origins": [],
+      "enable_logging": true,
+      "enable_recovery": true,
+      "static_dir": "",
+      "bpf_prog_dir": "/path/to/bpf"
+    },
+    "lb": {
+      "interfaces": {
+        "main": "eth0",
+        "healthcheck": "eth0",
+        "v4_tunnel": "",
+        "v6_tunnel": ""
+      },
+      "programs": {
+        "balancer": "/path/to/balancer.bpf.o",
+        "healthcheck": "/path/to/healthchecking.bpf.o"
+      },
+      "root_map": {
+        "enabled": false,
+        "path": "",
+        "position": 2
+      },
+      "mac": {
+        "default": "aa:bb:cc:dd:ee:ff",
+        "local": ""
+      },
+      "capacity": {
+        "max_vips": 512,
+        "max_reals": 4096,
+        "ch_ring_size": 65537,
+        "lru_size": 8000000,
+        "global_lru_size": 100000,
+        "max_lpm_src": 3000000,
+        "max_decap_dst": 6
+      },
+      "cpu": {
+        "forwarding_cores": [],
+        "numa_nodes": []
+      },
+      "xdp": {
+        "attach_flags": 0,
+        "priority": 2307
+      },
+      "encapsulation": {
+        "src_v4": "",
+        "src_v6": ""
+      },
+      "features": {
+        "enable_healthcheck": true,
+        "tunnel_based_hc_encap": true,
+        "flow_debug": false,
+        "enable_cid_v3": false,
+        "memlock_unlimited": true,
+        "cleanup_on_shutdown": true,
+        "testing": false
+      },
+      "hash_function": "maglev"
+    },
+    "target_groups": {
+      "group-0": [
+        {
+          "address": "10.0.0.1",
+          "weight": 100,
+          "flags": 0
+        }
+      ]
+    },
+    "vips": [
+      {
+        "address": "192.168.1.100",
+        "port": 80,
+        "proto": "tcp",
+        "target_group": "group-0",
+        "flags": 0
+      }
+    ]
+  }
+}
+```
+
+---
+
 ## Running the Server
 
 ```bash
 # Basic usage
 ./katran-server -port 8080
+
+# With YAML config file (recommended for production)
+./katran-server -config /path/to/config.yaml
 
 # With TLS
 ./katran-server -port 443 -tls-cert /path/to/cert.pem -tls-key /path/to/key.pem
@@ -1514,7 +1710,7 @@ Add a source IP for packet encapsulation.
 # With CORS enabled
 ./katran-server -port 8080 -cors -cors-origins "http://localhost:3000"
 
-# Full options
+# Full options (without config file)
 ./katran-server \
   -host 0.0.0.0 \
   -port 8080 \
@@ -1525,13 +1721,15 @@ Add a source IP for packet encapsulation.
   -cors-origins "http://localhost:3000,https://example.com" \
   -read-timeout 30 \
   -write-timeout 30 \
-  -idle-timeout 120
+  -idle-timeout 120 \
+  -bpf-prog-dir /path/to/bpf
 ```
 
 ### Command Line Flags
 
 | Flag | Default | Description |
 |------|---------|-------------|
+| `-config` | "" | Path to YAML config file (overrides other flags) |
 | `-host` | "" | Host to bind to |
 | `-port` | 8080 | Port to listen on |
 | `-tls-cert` | "" | Path to TLS certificate file |
@@ -1544,3 +1742,40 @@ Add a source IP for packet encapsulation.
 | `-idle-timeout` | 120 | Idle timeout in seconds |
 | `-no-logging` | false | Disable request logging |
 | `-no-recovery` | false | Disable panic recovery |
+| `-static-dir` | "" | Path to static files directory for SPA |
+| `-bpf-prog-dir` | "" | Base directory for BPF program files |
+
+### Using YAML Configuration
+
+When using the `-config` flag, the server will:
+1. Load the configuration from the YAML file
+2. Initialize the load balancer with the specified settings
+3. Create all VIPs and add backends from target groups
+4. Start the HTTP server
+
+Example config file structure:
+```yaml
+server:
+  host: ""
+  port: 8080
+  bpf_prog_dir: "/path/to/bpf"
+
+lb:
+  interfaces:
+    main: "eth0"
+  programs:
+    balancer: "balancer.bpf.o"
+
+target_groups:
+  web-servers:
+    - address: "10.0.0.1"
+      weight: 100
+
+vips:
+  - address: "192.168.1.100"
+    port: 80
+    proto: "tcp"
+    target_group: web-servers
+```
+
+See `config_example.yaml` for a full configuration example with all available options.

@@ -10,6 +10,7 @@ import (
 
 func main() {
 	// Parse command line flags
+	configFile := flag.String("config", "", "Path to YAML config file (overrides other flags if provided)")
 	host := flag.String("host", "", "Host to bind to")
 	port := flag.Int("port", 8080, "Port to listen on")
 	tlsCert := flag.String("tls-cert", "", "Path to TLS certificate file")
@@ -27,7 +28,13 @@ func main() {
 
 	flag.Parse()
 
-	// Build configuration
+	// If config file is provided, use it
+	if *configFile != "" {
+		runWithConfigFile(*configFile)
+		return
+	}
+
+	// Build configuration from flags
 	config := server.DefaultConfig()
 	config.Host = *host
 	config.Port = *port
@@ -58,6 +65,37 @@ func main() {
 	srv := server.New(config)
 
 	log.Printf("Katran REST API Server starting...")
+	if err := srv.RunWithGracefulShutdown(); err != nil {
+		log.Fatalf("Server error: %v", err)
+	}
+
+	log.Println("Server stopped")
+}
+
+// runWithConfigFile loads configuration from a YAML file and starts the server.
+func runWithConfigFile(configPath string) {
+	log.Printf("Loading configuration from %s...", configPath)
+
+	// Load config from file
+	cfg, err := server.LoadConfigFromFile(configPath)
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	// Convert to server config
+	serverConfig := cfg.Server.ToServerConfig()
+
+	// Create server
+	srv := server.New(serverConfig)
+
+	// Initialize LB from config (creates LB, loads/attaches BPF, configures VIPs)
+	log.Printf("Initializing load balancer from config...")
+	if err := srv.InitFromConfig(cfg); err != nil {
+		log.Fatalf("Failed to initialize from config: %v", err)
+	}
+
+	// Start server
+	log.Printf("Katran REST API Server starting on %s...", serverConfig.Addr())
 	if err := srv.RunWithGracefulShutdown(); err != nil {
 		log.Fatalf("Server error: %v", err)
 	}

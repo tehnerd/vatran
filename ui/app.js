@@ -254,6 +254,10 @@
       healthchecking_prog_path: "",
       default_mac: "",
       local_mac: "",
+      root_map_path: "",
+      root_map_pos: 2,
+      katran_src_v4: "",
+      katran_src_v6: "",
       use_root_map: false,
       max_vips: 1024,
       max_reals: 4096,
@@ -293,12 +297,14 @@
     const submitInit = async (event) => {
       event.preventDefault();
       try {
-        await api.post("/lb/create", {
+        const payload = {
           ...initForm,
+          root_map_pos: initForm.root_map_pos === "" ? undefined : Number(initForm.root_map_pos),
           max_vips: Number(initForm.max_vips),
           max_reals: Number(initForm.max_reals),
           hash_func: Number(initForm.hash_func),
-        });
+        };
+        await api.post("/lb/create", payload);
         setError("");
         setShowInit(false);
         addToast("Load balancer initialized.", "success");
@@ -411,6 +417,47 @@
                     value=${initForm.hash_func}
                     onInput=${(e) =>
                       setInitForm({ ...initForm, hash_func: e.target.value })}
+                  />
+                </label>
+              </div>
+              <div className="form-row">
+                <label className="field">
+                  <span>Root map path</span>
+                  <input
+                    value=${initForm.root_map_path}
+                    onInput=${(e) =>
+                      setInitForm({ ...initForm, root_map_path: e.target.value })}
+                    placeholder="/sys/fs/bpf/root_map"
+                  />
+                </label>
+                <label className="field">
+                  <span>Root map position</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value=${initForm.root_map_pos}
+                    onInput=${(e) =>
+                      setInitForm({ ...initForm, root_map_pos: e.target.value })}
+                  />
+                </label>
+              </div>
+              <div className="form-row">
+                <label className="field">
+                  <span>Katran src v4</span>
+                  <input
+                    value=${initForm.katran_src_v4}
+                    onInput=${(e) =>
+                      setInitForm({ ...initForm, katran_src_v4: e.target.value })}
+                    placeholder="10.0.0.1"
+                  />
+                </label>
+                <label className="field">
+                  <span>Katran src v6</span>
+                  <input
+                    value=${initForm.katran_src_v6}
+                    onInput=${(e) =>
+                      setInitForm({ ...initForm, katran_src_v6: e.target.value })}
+                    placeholder="fc00::1"
                   />
                 </label>
               </div>
