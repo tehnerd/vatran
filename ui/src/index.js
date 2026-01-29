@@ -390,29 +390,35 @@
           <p>Initialized: ${status.initialized ? "yes" : "no"}</p>
           <p>Ready: ${status.ready ? "yes" : "no"}</p>
           <div className="row">
-            <button className="btn" onClick=${() => setShowInit((s) => !s)}>
-              ${showInit ? "Close" : "Initialize"}
-            </button>
+            ${!status.initialized &&
+            html`
+              <button className="btn" onClick=${() => setShowInit((s) => !s)}>
+                ${showInit ? "Close" : "Initialize"}
+              </button>
+            `}
             <button className="btn secondary" onClick=${() => setShowVipForm((s) => !s)}>
               ${showVipForm ? "Close" : "Create VIP"}
             </button>
           </div>
-          <div className="row" style=${{ marginTop: 12 }}>
-            <button
-              className="btn ghost"
-              disabled=${!status.initialized}
-              onClick=${loadBpfProgs}
-            >
-              Load BPF Programs
-            </button>
-            <button
-              className="btn ghost"
-              disabled=${!status.initialized}
-              onClick=${attachBpfProgs}
-            >
-              Attach BPF Programs
-            </button>
-          </div>
+          ${!status.ready &&
+          html`
+            <div className="row" style=${{ marginTop: 12 }}>
+              <button
+                className="btn ghost"
+                disabled=${!status.initialized}
+                onClick=${loadBpfProgs}
+              >
+                Load BPF Programs
+              </button>
+              <button
+                className="btn ghost"
+                disabled=${!status.initialized}
+                onClick=${attachBpfProgs}
+              >
+                Attach BPF Programs
+              </button>
+            </div>
+          `}
           ${showInit &&
           html`
             <form className="form" onSubmit=${submitInit}>

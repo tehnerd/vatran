@@ -1,68 +1,72 @@
-(()=>{(()=>{let{useEffect:P,useMemo:C,useRef:q,useState:f,useContext:j}=React,{BrowserRouter:H,Routes:M,Route:k,NavLink:S,Link:T,useParams:O,useNavigate:J}=ReactRouterDOM,r=htm.bind(React.createElement),D=React.createContext({addToast:()=>{}});function L(){return j(D)}let h={base:"/api/v1",async request(e,a={}){let u={method:a.method||"GET",headers:{"Content-Type":"application/json"}},n=`${h.base}${e}`;if(a.body!==void 0&&a.body!==null)if(u.method==="GET"){let d=new URLSearchParams;Object.entries(a.body).forEach(([g,i])=>{if(i!=null){if(Array.isArray(i)){i.forEach(b=>d.append(g,String(b)));return}if(typeof i=="object"){d.set(g,JSON.stringify(i));return}d.set(g,String(i))}});let o=d.toString();o&&(n+=`${n.includes("?")?"&":"?"}${o}`)}else u.body=JSON.stringify(a.body);let p=await fetch(n,u),$;try{$=await p.json()}catch{throw new Error("invalid JSON response")}if(!p.ok)throw new Error($?.error?.message||`HTTP ${p.status}`);if(!$.success){let d=$.error?.message||"request failed";throw new Error(d)}return $.data},get(e,a){return h.request(e,{method:"GET",body:a})},post(e,a){return h.request(e,{method:"POST",body:a})},put(e,a){return h.request(e,{method:"PUT",body:a})},del(e,a){return h.request(e,{method:"DELETE",body:a})}};function V(e){return`${encodeURIComponent(e.address)}:${e.port}:${e.proto}`}function A(e){let a=e.split(":"),u=Number(a.pop()||0),n=Number(a.pop()||0);return{address:decodeURIComponent(a.join(":")),port:n,proto:u}}function X(e,a,u=[]){let[n,p]=f(null),[$,d]=f(""),[o,g]=f(!0);return P(()=>{let i=!0,b=async()=>{try{let c=await e();i&&(p(c),d(""),g(!1))}catch(c){i&&(d(c.message||"request failed"),g(!1))}};b();let s=setInterval(b,a);return()=>{i=!1,clearInterval(s)}},u),{data:n,error:$,loading:o}}function B({path:e,body:a,intervalMs:u=1e3,limit:n=60}){let[p,$]=f([]),[d,o]=f(""),g=C(()=>JSON.stringify(a||{}),[a]);return P(()=>{if(a===null)return $([]),o(""),()=>{};let i=!0,b=async()=>{try{let c=await h.get(e,a);if(!i)return;let v=new Date().toLocaleTimeString();$(y=>y.concat({label:v,...c}).slice(-n)),o("")}catch(c){i&&o(c.message||"request failed")}};b();let s=setInterval(b,u);return()=>{i=!1,clearInterval(s)}},[e,g,u,n]),{points:p,error:d}}function z({title:e,points:a,keys:u}){let n=q(null),p=q(null);return P(()=>{if(!n.current)return;p.current||(p.current=new Chart(n.current,{type:"line",data:{labels:[],datasets:[]},options:{responsive:!0,animation:!1,scales:{x:{grid:{display:!1}},y:{beginAtZero:!0}},plugins:{legend:{display:!0,position:"bottom"},title:{display:!!e,text:e}}}}));let $=p.current,d=a.map(o=>o.label);return $.data.labels=d,$.data.datasets=u.map(o=>({label:o.label,data:a.map(g=>g[o.field]||0),borderColor:o.color,backgroundColor:o.fill,borderWidth:2,tension:.3})),$.update(),()=>{}},[a,u,e]),P(()=>()=>{p.current&&(p.current.destroy(),p.current=null)},[]),r`<canvas ref=${n} height="120"></canvas>`}function W({children:e}){return e}function K({toasts:e,onDismiss:a}){return r`
+(()=>{(()=>{let{useEffect:P,useMemo:C,useRef:q,useState:f,useContext:j}=React,{BrowserRouter:H,Routes:M,Route:k,NavLink:S,Link:T,useParams:O,useNavigate:J}=ReactRouterDOM,r=htm.bind(React.createElement),D=React.createContext({addToast:()=>{}});function L(){return j(D)}let g={base:"/api/v1",async request(a,e={}){let u={method:e.method||"GET",headers:{"Content-Type":"application/json"}},n=`${g.base}${a}`;if(e.body!==void 0&&e.body!==null)if(u.method==="GET"){let d=new URLSearchParams;Object.entries(e.body).forEach(([h,i])=>{if(i!=null){if(Array.isArray(i)){i.forEach(b=>d.append(h,String(b)));return}if(typeof i=="object"){d.set(h,JSON.stringify(i));return}d.set(h,String(i))}});let o=d.toString();o&&(n+=`${n.includes("?")?"&":"?"}${o}`)}else u.body=JSON.stringify(e.body);let p=await fetch(n,u),$;try{$=await p.json()}catch{throw new Error("invalid JSON response")}if(!p.ok)throw new Error($?.error?.message||`HTTP ${p.status}`);if(!$.success){let d=$.error?.message||"request failed";throw new Error(d)}return $.data},get(a,e){return g.request(a,{method:"GET",body:e})},post(a,e){return g.request(a,{method:"POST",body:e})},put(a,e){return g.request(a,{method:"PUT",body:e})},del(a,e){return g.request(a,{method:"DELETE",body:e})}};function V(a){return`${encodeURIComponent(a.address)}:${a.port}:${a.proto}`}function A(a){let e=a.split(":"),u=Number(e.pop()||0),n=Number(e.pop()||0);return{address:decodeURIComponent(e.join(":")),port:n,proto:u}}function X(a,e,u=[]){let[n,p]=f(null),[$,d]=f(""),[o,h]=f(!0);return P(()=>{let i=!0,b=async()=>{try{let c=await a();i&&(p(c),d(""),h(!1))}catch(c){i&&(d(c.message||"request failed"),h(!1))}};b();let s=setInterval(b,e);return()=>{i=!1,clearInterval(s)}},u),{data:n,error:$,loading:o}}function z({path:a,body:e,intervalMs:u=1e3,limit:n=60}){let[p,$]=f([]),[d,o]=f(""),h=C(()=>JSON.stringify(e||{}),[e]);return P(()=>{if(e===null)return $([]),o(""),()=>{};let i=!0,b=async()=>{try{let c=await g.get(a,e);if(!i)return;let v=new Date().toLocaleTimeString();$(y=>y.concat({label:v,...c}).slice(-n)),o("")}catch(c){i&&o(c.message||"request failed")}};b();let s=setInterval(b,u);return()=>{i=!1,clearInterval(s)}},[a,h,u,n]),{points:p,error:d}}function B({title:a,points:e,keys:u}){let n=q(null),p=q(null);return P(()=>{if(!n.current)return;p.current||(p.current=new Chart(n.current,{type:"line",data:{labels:[],datasets:[]},options:{responsive:!0,animation:!1,scales:{x:{grid:{display:!1}},y:{beginAtZero:!0}},plugins:{legend:{display:!0,position:"bottom"},title:{display:!!a,text:a}}}}));let $=p.current,d=e.map(o=>o.label);return $.data.labels=d,$.data.datasets=u.map(o=>({label:o.label,data:e.map(h=>h[o.field]||0),borderColor:o.color,backgroundColor:o.fill,borderWidth:2,tension:.3})),$.update(),()=>{}},[e,u,a]),P(()=>()=>{p.current&&(p.current.destroy(),p.current=null)},[]),r`<canvas ref=${n} height="120"></canvas>`}function W({children:a}){return a}function K({toasts:a,onDismiss:e}){return r`
       <div className="toast-stack">
-        ${e.map(u=>r`
+        ${a.map(u=>r`
             <div className=${`toast ${u.kind}`}>
               <span>${u.message}</span>
-              <button className="toast-close" onClick=${()=>a(u.id)}>
+              <button className="toast-close" onClick=${()=>e(u.id)}>
                 ×
               </button>
             </div>
           `)}
       </div>
-    `}function Y({status:e}){return r`
+    `}function Y({status:a}){return r`
       <header>
         <div>
           <div style=${{fontSize:20,fontWeight:700}}>Vatran</div>
           <div className="status-pill">
-            <span className=${`dot ${e.ready?"ok":""}`}></span>
-            ${e.ready?"Ready":"Not ready"}
+            <span className=${`dot ${a.ready?"ok":""}`}></span>
+            ${a.ready?"Ready":"Not ready"}
           </div>
         </div>
         <nav>
-          <${S} to="/" end className=${({isActive:a})=>a?"active":""}>
+          <${S} to="/" end className=${({isActive:e})=>e?"active":""}>
             Dashboard
           </${S}>
-          <${S} to="/stats/global" className=${({isActive:a})=>a?"active":""}>
+          <${S} to="/stats/global" className=${({isActive:e})=>e?"active":""}>
             Global stats
           </${S}>
-          <${S} to="/stats/real" className=${({isActive:a})=>a?"active":""}>
+          <${S} to="/stats/real" className=${({isActive:e})=>e?"active":""}>
             Per-real stats
           </${S}>
-          <${S} to="/config" className=${({isActive:a})=>a?"active":""}>
+          <${S} to="/config" className=${({isActive:e})=>e?"active":""}>
             Config export
           </${S}>
         </nav>
       </header>
-    `}function Z(){let{addToast:e}=L(),[a,u]=f({initialized:!1,ready:!1}),[n,p]=f([]),[$,d]=f(""),[o,g]=f(!1),[i,b]=f(!1),[s,c]=f({main_interface:"",balancer_prog_path:"",healthchecking_prog_path:"",default_mac:"",local_mac:"",root_map_path:"",root_map_pos:2,katran_src_v4:"",katran_src_v6:"",use_root_map:!1,max_vips:1024,max_reals:4096,hash_func:0}),[v,y]=f({address:"",port:80,proto:6,flags:0}),m=async()=>{try{let t=await h.get("/lb/status"),I=await h.get("/vips");u(t||{initialized:!1,ready:!1}),p(I||[]),d("")}catch(t){d(t.message||"request failed")}};P(()=>{let t=!0;return(async()=>{t&&await m()})(),()=>{t=!1}},[]);let R=async t=>{t.preventDefault();try{let I={...s,root_map_pos:s.root_map_pos===""?void 0:Number(s.root_map_pos),max_vips:Number(s.max_vips),max_reals:Number(s.max_reals),hash_func:Number(s.hash_func)};await h.post("/lb/create",I),d(""),g(!1),e("Load balancer initialized.","success"),await m()}catch(I){d(I.message||"request failed"),e(I.message||"Initialize failed.","error")}},w=async t=>{t.preventDefault();try{await h.post("/vips",{...v,port:Number(v.port),proto:Number(v.proto),flags:Number(v.flags||0)}),y({address:"",port:80,proto:6,flags:0}),d(""),b(!1),e("VIP created.","success"),await m()}catch(I){d(I.message||"request failed"),e(I.message||"VIP create failed.","error")}},_=async()=>{try{await h.post("/lb/load-bpf-progs"),d(""),e("BPF programs loaded.","success"),await m()}catch(t){d(t.message||"request failed"),e(t.message||"Load BPF programs failed.","error")}},F=async()=>{try{await h.post("/lb/attach-bpf-progs"),d(""),e("BPF programs attached.","success"),await m()}catch(t){d(t.message||"request failed"),e(t.message||"Attach BPF programs failed.","error")}};return r`
+    `}function Z(){let{addToast:a}=L(),[e,u]=f({initialized:!1,ready:!1}),[n,p]=f([]),[$,d]=f(""),[o,h]=f(!1),[i,b]=f(!1),[s,c]=f({main_interface:"",balancer_prog_path:"",healthchecking_prog_path:"",default_mac:"",local_mac:"",root_map_path:"",root_map_pos:2,katran_src_v4:"",katran_src_v6:"",use_root_map:!1,max_vips:1024,max_reals:4096,hash_func:0}),[v,y]=f({address:"",port:80,proto:6,flags:0}),m=async()=>{try{let t=await g.get("/lb/status"),I=await g.get("/vips");u(t||{initialized:!1,ready:!1}),p(I||[]),d("")}catch(t){d(t.message||"request failed")}};P(()=>{let t=!0;return(async()=>{t&&await m()})(),()=>{t=!1}},[]);let R=async t=>{t.preventDefault();try{let I={...s,root_map_pos:s.root_map_pos===""?void 0:Number(s.root_map_pos),max_vips:Number(s.max_vips),max_reals:Number(s.max_reals),hash_func:Number(s.hash_func)};await g.post("/lb/create",I),d(""),h(!1),a("Load balancer initialized.","success"),await m()}catch(I){d(I.message||"request failed"),a(I.message||"Initialize failed.","error")}},w=async t=>{t.preventDefault();try{await g.post("/vips",{...v,port:Number(v.port),proto:Number(v.proto),flags:Number(v.flags||0)}),y({address:"",port:80,proto:6,flags:0}),d(""),b(!1),a("VIP created.","success"),await m()}catch(I){d(I.message||"request failed"),a(I.message||"VIP create failed.","error")}},_=async()=>{try{await g.post("/lb/load-bpf-progs"),d(""),a("BPF programs loaded.","success"),await m()}catch(t){d(t.message||"request failed"),a(t.message||"Load BPF programs failed.","error")}},F=async()=>{try{await g.post("/lb/attach-bpf-progs"),d(""),a("BPF programs attached.","success"),await m()}catch(t){d(t.message||"request failed"),a(t.message||"Attach BPF programs failed.","error")}};return r`
       <main>
         <section className="card">
           <h2>Load balancer</h2>
-          <p>Initialized: ${a.initialized?"yes":"no"}</p>
-          <p>Ready: ${a.ready?"yes":"no"}</p>
+          <p>Initialized: ${e.initialized?"yes":"no"}</p>
+          <p>Ready: ${e.ready?"yes":"no"}</p>
           <div className="row">
-            <button className="btn" onClick=${()=>g(t=>!t)}>
-              ${o?"Close":"Initialize"}
-            </button>
+            ${!e.initialized&&r`
+              <button className="btn" onClick=${()=>h(t=>!t)}>
+                ${o?"Close":"Initialize"}
+              </button>
+            `}
             <button className="btn secondary" onClick=${()=>b(t=>!t)}>
               ${i?"Close":"Create VIP"}
             </button>
           </div>
-          <div className="row" style=${{marginTop:12}}>
-            <button
-              className="btn ghost"
-              disabled=${!a.initialized}
-              onClick=${_}
-            >
-              Load BPF Programs
-            </button>
-            <button
-              className="btn ghost"
-              disabled=${!a.initialized}
-              onClick=${F}
-            >
-              Attach BPF Programs
-            </button>
-          </div>
+          ${!e.ready&&r`
+            <div className="row" style=${{marginTop:12}}>
+              <button
+                className="btn ghost"
+                disabled=${!e.initialized}
+                onClick=${_}
+              >
+                Load BPF Programs
+              </button>
+              <button
+                className="btn ghost"
+                disabled=${!e.initialized}
+                onClick=${F}
+              >
+                Attach BPF Programs
+              </button>
+            </div>
+          `}
           ${o&&r`
             <form className="form" onSubmit=${R}>
               <div className="form-row">
@@ -269,7 +273,7 @@
               `}
         </section>
       </main>
-    `}function Q(){let{addToast:e}=L(),a=O(),u=J(),n=C(()=>A(a.vipId),[a.vipId]),[p,$]=f([]),[d,o]=f(""),[g,i]=f(""),[b,s]=f(!0),[c,v]=f({address:"",weight:100,flags:0}),[y,m]=f({}),[R,w]=f(null),[_,F]=f({flag:0,set:!0}),[t,I]=f({hash_function:0}),E=async()=>{try{let l=await h.get("/vips/reals",n);$(l||[]);let N={};(l||[]).forEach(G=>{N[G.address]=G.weight}),m(N),o(""),s(!1)}catch(l){o(l.message||"request failed"),s(!1)}},U=async()=>{try{let l=await h.get("/vips/flags",n);w(l?.flags??0),i("")}catch(l){i(l.message||"request failed")}};P(()=>{E(),U()},[a.vipId]);let le=async l=>{try{let N=Number(y[l.address]);await h.post("/vips/reals",{vip:n,real:{address:l.address,weight:N,flags:l.flags||0}}),await E(),e("Real weight updated.","success")}catch(N){o(N.message||"request failed"),e(N.message||"Update failed.","error")}},ne=async l=>{try{await h.del("/vips/reals",{vip:n,real:{address:l.address,weight:l.weight,flags:l.flags||0}}),await E(),e("Real removed.","success")}catch(N){o(N.message||"request failed"),e(N.message||"Remove failed.","error")}},oe=async l=>{l.preventDefault();try{await h.post("/vips/reals",{vip:n,real:{address:c.address,weight:Number(c.weight),flags:Number(c.flags||0)}}),v({address:"",weight:100,flags:0}),await E(),e("Real added.","success")}catch(N){o(N.message||"request failed"),e(N.message||"Add failed.","error")}},ie=async()=>{try{await h.del("/vips",n),e("VIP deleted.","success"),u("/")}catch(l){o(l.message||"request failed"),e(l.message||"Delete failed.","error")}},ce=async l=>{l.preventDefault();try{await h.put("/vips/flags",{...n,flag:Number(_.flag),set:!!_.set}),await U(),e("VIP flags updated.","success")}catch(N){i(N.message||"request failed"),e(N.message||"Flag update failed.","error")}},de=async l=>{l.preventDefault();try{await h.put("/vips/hash-function",{...n,hash_function:Number(t.hash_function)}),e("Hash function updated.","success")}catch(N){i(N.message||"request failed"),e(N.message||"Hash update failed.","error")}};return r`
+    `}function Q(){let{addToast:a}=L(),e=O(),u=J(),n=C(()=>A(e.vipId),[e.vipId]),[p,$]=f([]),[d,o]=f(""),[h,i]=f(""),[b,s]=f(!0),[c,v]=f({address:"",weight:100,flags:0}),[y,m]=f({}),[R,w]=f(null),[_,F]=f({flag:0,set:!0}),[t,I]=f({hash_function:0}),E=async()=>{try{let l=await g.get("/vips/reals",n);$(l||[]);let N={};(l||[]).forEach(G=>{N[G.address]=G.weight}),m(N),o(""),s(!1)}catch(l){o(l.message||"request failed"),s(!1)}},U=async()=>{try{let l=await g.get("/vips/flags",n);w(l?.flags??0),i("")}catch(l){i(l.message||"request failed")}};P(()=>{E(),U()},[e.vipId]);let le=async l=>{try{let N=Number(y[l.address]);await g.post("/vips/reals",{vip:n,real:{address:l.address,weight:N,flags:l.flags||0}}),await E(),a("Real weight updated.","success")}catch(N){o(N.message||"request failed"),a(N.message||"Update failed.","error")}},ne=async l=>{try{await g.del("/vips/reals",{vip:n,real:{address:l.address,weight:l.weight,flags:l.flags||0}}),await E(),a("Real removed.","success")}catch(N){o(N.message||"request failed"),a(N.message||"Remove failed.","error")}},oe=async l=>{l.preventDefault();try{await g.post("/vips/reals",{vip:n,real:{address:c.address,weight:Number(c.weight),flags:Number(c.flags||0)}}),v({address:"",weight:100,flags:0}),await E(),a("Real added.","success")}catch(N){o(N.message||"request failed"),a(N.message||"Add failed.","error")}},ie=async()=>{try{await g.del("/vips",n),a("VIP deleted.","success"),u("/")}catch(l){o(l.message||"request failed"),a(l.message||"Delete failed.","error")}},ce=async l=>{l.preventDefault();try{await g.put("/vips/flags",{...n,flag:Number(_.flag),set:!!_.set}),await U(),a("VIP flags updated.","success")}catch(N){i(N.message||"request failed"),a(N.message||"Flag update failed.","error")}},de=async l=>{l.preventDefault();try{await g.put("/vips/hash-function",{...n,hash_function:Number(t.hash_function)}),a("Hash function updated.","success")}catch(N){i(N.message||"request failed"),a(N.message||"Hash update failed.","error")}};return r`
       <main>
         <section className="card">
           <div className="section-header">
@@ -284,7 +288,7 @@
             </div>
           </div>
           ${d&&r`<p className="error">${d}</p>`}
-          ${g&&r`<p className="error">${g}</p>`}
+          ${h&&r`<p className="error">${h}</p>`}
           ${b?r`<p className="muted">Loading reals…</p>`:r`
                 <table className="table">
                   <thead>
@@ -407,26 +411,26 @@
           </form>
         </section>
       </main>
-    `}function ee(){let e=O(),a=C(()=>A(e.vipId),[e.vipId]),{points:u,error:n}=B({path:"/stats/vip",body:a}),p=C(()=>[{label:"v1",field:"v1",color:"#2f4858",fill:"rgba(47,72,88,0.15)"},{label:"v2",field:"v2",color:"#d97757",fill:"rgba(217,119,87,0.2)"}],[]);return r`
+    `}function ee(){let a=O(),e=C(()=>A(a.vipId),[a.vipId]),{points:u,error:n}=z({path:"/stats/vip",body:e}),p=C(()=>[{label:"v1",field:"v1",color:"#2f4858",fill:"rgba(47,72,88,0.15)"},{label:"v2",field:"v2",color:"#d97757",fill:"rgba(217,119,87,0.2)"}],[]);return r`
       <main>
         <section className="card">
           <div className="section-header">
             <div>
               <h2>VIP Stats</h2>
-              <p className="muted">${a.address}:${a.port} / ${a.proto}</p>
+              <p className="muted">${e.address}:${e.port} / ${e.proto}</p>
             </div>
           </div>
           ${n&&r`<p className="error">${n}</p>`}
-          <${z} title="Traffic" points=${u} keys=${p} />
+          <${B} title="Traffic" points=${u} keys=${p} />
         </section>
       </main>
-    `}function x({title:e,path:a}){let{points:u,error:n}=B({path:a}),p=C(()=>[{label:"v1",field:"v1",color:"#2f4858",fill:"rgba(47,72,88,0.2)"},{label:"v2",field:"v2",color:"#d97757",fill:"rgba(217,119,87,0.2)"}],[]);return r`
+    `}function x({title:a,path:e}){let{points:u,error:n}=z({path:e}),p=C(()=>[{label:"v1",field:"v1",color:"#2f4858",fill:"rgba(47,72,88,0.2)"},{label:"v2",field:"v2",color:"#d97757",fill:"rgba(217,119,87,0.2)"}],[]);return r`
       <div className="card">
-        <h3>${e}</h3>
+        <h3>${a}</h3>
         ${n&&r`<p className="error">${n}</p>`}
-        <${z} points=${u} keys=${p} />
+        <${B} points=${u} keys=${p} />
       </div>
-    `}function ae(){let{data:e,error:a}=X(()=>h.get("/stats/userspace"),1e3,[]);return r`
+    `}function ae(){let{data:a,error:e}=X(()=>g.get("/stats/userspace"),1e3,[]);return r`
       <main>
         <section className="card">
           <h2>Global Stats</h2>
@@ -444,22 +448,22 @@
         </section>
         <section className="card">
           <h3>Userspace</h3>
-          ${a&&r`<p className="error">${a}</p>`}
-          ${e?r`
+          ${e&&r`<p className="error">${e}</p>`}
+          ${a?r`
                 <div className="row">
                   <div className="stat">
                     <span className="muted">BPF failed calls</span>
-                    <strong>${e.bpf_failed_calls??0}</strong>
+                    <strong>${a.bpf_failed_calls??0}</strong>
                   </div>
                   <div className="stat">
                     <span className="muted">Addr validation failed</span>
-                    <strong>${e.addr_validation_failed??0}</strong>
+                    <strong>${a.addr_validation_failed??0}</strong>
                   </div>
                 </div>
               `:r`<p className="muted">Waiting for data…</p>`}
         </section>
       </main>
-    `}function te(){let[e,a]=f([]),[u,n]=f(""),[p,$]=f([]),[d,o]=f(""),[g,i]=f(null),[b,s]=f("");P(()=>{let m=!0;return(async()=>{try{let w=await h.get("/vips");if(!m)return;a(w||[]),!u&&w&&w.length>0&&n(V(w[0]))}catch(w){m&&s(w.message||"request failed")}})(),()=>{m=!1}},[]),P(()=>{if(!u)return;let m=A(u),R=!0;return(async()=>{try{let _=await h.get("/vips/reals",m);if(!R)return;$(_||[]),_&&_.length>0?o(F=>F||_[0].address):o(""),s("")}catch(_){R&&s(_.message||"request failed")}})(),()=>{R=!1}},[u]),P(()=>{if(!d){i(null);return}let m=!0;return(async()=>{try{let w=await h.get("/reals/index",{address:d});if(!m)return;i(w?.index??null),s("")}catch(w){m&&s(w.message||"request failed")}})(),()=>{m=!1}},[d]);let{points:c,error:v}=B({path:"/stats/real",body:g!==null?{index:g}:null}),y=C(()=>[{label:"v1",field:"v1",color:"#2f4858",fill:"rgba(47,72,88,0.2)"},{label:"v2",field:"v2",color:"#d97757",fill:"rgba(217,119,87,0.2)"}],[]);return r`
+    `}function te(){let[a,e]=f([]),[u,n]=f(""),[p,$]=f([]),[d,o]=f(""),[h,i]=f(null),[b,s]=f("");P(()=>{let m=!0;return(async()=>{try{let w=await g.get("/vips");if(!m)return;e(w||[]),!u&&w&&w.length>0&&n(V(w[0]))}catch(w){m&&s(w.message||"request failed")}})(),()=>{m=!1}},[]),P(()=>{if(!u)return;let m=A(u),R=!0;return(async()=>{try{let _=await g.get("/vips/reals",m);if(!R)return;$(_||[]),_&&_.length>0?o(F=>F||_[0].address):o(""),s("")}catch(_){R&&s(_.message||"request failed")}})(),()=>{R=!1}},[u]),P(()=>{if(!d){i(null);return}let m=!0;return(async()=>{try{let w=await g.get("/reals/index",{address:d});if(!m)return;i(w?.index??null),s("")}catch(w){m&&s(w.message||"request failed")}})(),()=>{m=!1}},[d]);let{points:c,error:v}=z({path:"/stats/real",body:h!==null?{index:h}:null}),y=C(()=>[{label:"v1",field:"v1",color:"#2f4858",fill:"rgba(47,72,88,0.2)"},{label:"v2",field:"v2",color:"#d97757",fill:"rgba(217,119,87,0.2)"}],[]);return r`
       <main>
         <section className="card">
           <h2>Per-Real Stats</h2>
@@ -469,7 +473,7 @@
             <label className="field">
               <span>VIP</span>
               <select value=${u} onChange=${m=>n(m.target.value)}>
-                ${e.map(m=>r`
+                ${a.map(m=>r`
                     <option value=${V(m)}>
                       ${m.address}:${m.port} / ${m.proto}
                     </option>
@@ -490,17 +494,17 @@
             </label>
             <label className="field">
               <span>Index</span>
-              <input value=${g??""} readOnly />
+              <input value=${h??""} readOnly />
             </label>
           </div>
         </section>
         <section className="card">
           <h3>Real stats</h3>
           ${v&&r`<p className="error">${v}</p>`}
-          ${g===null?r`<p className="muted">Select a real to start polling.</p>`:r`<${z} points=${c} keys=${y} />`}
+          ${h===null?r`<p className="muted">Select a real to start polling.</p>`:r`<${B} points=${c} keys=${y} />`}
         </section>
       </main>
-    `}function se(){let{addToast:e}=L(),[a,u]=f(""),[n,p]=f(""),[$,d]=f(!0),[o,g]=f(""),i=q(!0),b=async()=>{if(i.current){d(!0),p("");try{let c=await fetch(`${h.base}/config/export`,{headers:{Accept:"application/x-yaml"}});if(!c.ok){let y=`HTTP ${c.status}`;try{y=(await c.json())?.error?.message||y}catch{}throw new Error(y)}let v=await c.text();if(!i.current)return;u(v||""),g(new Date().toLocaleString())}catch(c){i.current&&p(c.message||"request failed")}finally{i.current&&d(!1)}}},s=async()=>{if(a)try{await navigator.clipboard.writeText(a),e("Config copied to clipboard","info")}catch{e("Failed to copy config","error")}};return P(()=>(i.current=!0,b(),()=>{i.current=!1}),[]),r`
+    `}function se(){let{addToast:a}=L(),[e,u]=f(""),[n,p]=f(""),[$,d]=f(!0),[o,h]=f(""),i=q(!0),b=async()=>{if(i.current){d(!0),p("");try{let c=await fetch(`${g.base}/config/export`,{headers:{Accept:"application/x-yaml"}});if(!c.ok){let y=`HTTP ${c.status}`;try{y=(await c.json())?.error?.message||y}catch{}throw new Error(y)}let v=await c.text();if(!i.current)return;u(v||""),h(new Date().toLocaleString())}catch(c){i.current&&p(c.message||"request failed")}finally{i.current&&d(!1)}}},s=async()=>{if(e)try{await navigator.clipboard.writeText(e),a("Config copied to clipboard","info")}catch{a("Failed to copy config","error")}};return P(()=>(i.current=!0,b(),()=>{i.current=!1}),[]),r`
       <main>
         <section className="card">
           <div className="section-header">
@@ -509,7 +513,7 @@
               <p className="muted">Exported from /api/v1/config/export</p>
             </div>
             <div className="row">
-              <button className="btn ghost" onClick=${s} disabled=${!a}>
+              <button className="btn ghost" onClick=${s} disabled=${!e}>
                 Copy YAML
               </button>
               <button className="btn" onClick=${b} disabled=${$}>
@@ -518,15 +522,15 @@
             </div>
           </div>
           ${n&&r`<p className="error">${n}</p>`}
-          ${$?r`<p className="muted">Loading config...</p>`:a?r`<pre className="yaml-view">${a}</pre>`:r`<p className="muted">No config data returned.</p>`}
+          ${$?r`<p className="muted">Loading config...</p>`:e?r`<pre className="yaml-view">${e}</pre>`:r`<p className="muted">No config data returned.</p>`}
           ${o&&r`<p className="muted">Last fetched ${o}</p>`}
         </section>
       </main>
-    `}function re(){let[e,a]=f({initialized:!1,ready:!1}),[u,n]=f([]),p=q({}),$=(o,g="info")=>{let i=`${Date.now()}-${Math.random().toString(16).slice(2)}`;n(b=>b.concat({id:i,message:o,kind:g})),p.current[i]=setTimeout(()=>{n(b=>b.filter(s=>s.id!==i)),delete p.current[i]},4e3)},d=o=>{p.current[o]&&(clearTimeout(p.current[o]),delete p.current[o]),n(g=>g.filter(i=>i.id!==o))};return P(()=>{let o=!0,g=async()=>{try{let b=await h.get("/lb/status");o&&a(b||{initialized:!1,ready:!1})}catch{o&&a({initialized:!1,ready:!1})}};g();let i=setInterval(g,5e3);return()=>{o=!1,clearInterval(i)}},[]),r`
+    `}function re(){let[a,e]=f({initialized:!1,ready:!1}),[u,n]=f([]),p=q({}),$=(o,h="info")=>{let i=`${Date.now()}-${Math.random().toString(16).slice(2)}`;n(b=>b.concat({id:i,message:o,kind:h})),p.current[i]=setTimeout(()=>{n(b=>b.filter(s=>s.id!==i)),delete p.current[i]},4e3)},d=o=>{p.current[o]&&(clearTimeout(p.current[o]),delete p.current[o]),n(h=>h.filter(i=>i.id!==o))};return P(()=>{let o=!0,h=async()=>{try{let b=await g.get("/lb/status");o&&e(b||{initialized:!1,ready:!1})}catch{o&&e({initialized:!1,ready:!1})}};h();let i=setInterval(h,5e3);return()=>{o=!1,clearInterval(i)}},[]),r`
       <${H}>
         <${W}>
           <${D.Provider} value=${{addToast:$}}>
-            <${Y} status=${e} />
+            <${Y} status=${a} />
             <${M}>
               <${k} path="/" element=${r`<${Z} />`} />
               <${k} path="/vips/:vipId" element=${r`<${Q} />`} />
