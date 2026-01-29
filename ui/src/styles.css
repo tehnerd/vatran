@@ -94,6 +94,11 @@ main {
   cursor: pointer;
 }
 
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .btn.secondary {
   background: var(--accent);
 }
@@ -187,6 +192,19 @@ main {
 .error {
   color: #b23a2f;
   font-weight: 600;
+}
+
+.yaml-view {
+  background: #fffaf3;
+  border: 1px solid #e4d8ca;
+  border-radius: 12px;
+  padding: 12px;
+  font-family: "JetBrains Mono", "Fira Mono", "SFMono-Regular", monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre;
+  overflow: auto;
+  max-height: 520px;
 }
 
 .stat {

@@ -257,6 +257,9 @@
           <${NavLink} to="/stats/real" className=${({ isActive }) => (isActive ? "active" : "")}>
             Per-real stats
           </${NavLink}>
+          <${NavLink} to="/config" className=${({ isActive }) => (isActive ? "active" : "")}>
+            Config export
+          </${NavLink}>
         </nav>
       </header>
     `;
@@ -1125,6 +1128,94 @@
     `;
   }
 
+  function ConfigExport() {
+    const { addToast } = useToast();
+    const [yaml, setYaml] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(true);
+    const [lastFetched, setLastFetched] = useState("");
+    const mountedRef = useRef(true);
+
+    const load = async () => {
+      if (!mountedRef.current) return;
+      setLoading(true);
+      setError("");
+      try {
+        const res = await fetch(`${api.base}/config/export`, {
+          headers: { Accept: "application/x-yaml" },
+        });
+        if (!res.ok) {
+          let message = `HTTP ${res.status}`;
+          try {
+            const payload = await res.json();
+            message = payload?.error?.message || message;
+          } catch (err) {
+            // ignore JSON parsing errors for YAML responses
+          }
+          throw new Error(message);
+        }
+        const text = await res.text();
+        if (!mountedRef.current) return;
+        setYaml(text || "");
+        setLastFetched(new Date().toLocaleString());
+      } catch (err) {
+        if (mountedRef.current) {
+          setError(err.message || "request failed");
+        }
+      } finally {
+        if (mountedRef.current) {
+          setLoading(false);
+        }
+      }
+    };
+
+    const copyToClipboard = async () => {
+      if (!yaml) return;
+      try {
+        await navigator.clipboard.writeText(yaml);
+        addToast("Config copied to clipboard", "info");
+      } catch (err) {
+        addToast("Failed to copy config", "error");
+      }
+    };
+
+    useEffect(() => {
+      mountedRef.current = true;
+      load();
+      return () => {
+        mountedRef.current = false;
+      };
+    }, []);
+
+    return html`
+      <main>
+        <section className="card">
+          <div className="section-header">
+            <div>
+              <h2>Running config</h2>
+              <p className="muted">Exported from /api/v1/config/export</p>
+            </div>
+            <div className="row">
+              <button className="btn ghost" onClick=${copyToClipboard} disabled=${!yaml}>
+                Copy YAML
+              </button>
+              <button className="btn" onClick=${load} disabled=${loading}>
+                Refresh
+              </button>
+            </div>
+          </div>
+          ${error && html`<p className="error">${error}</p>`}
+          ${loading
+            ? html`<p className="muted">Loading config...</p>`
+            : yaml
+              ? html`<pre className="yaml-view">${yaml}</pre>`
+              : html`<p className="muted">No config data returned.</p>`}
+          ${lastFetched && html`<p className="muted">Last fetched ${lastFetched}</p>`}
+        </section>
+      </main>
+    `;
+  }
+
   function App() {
     const [status, setStatus] = useState({ initialized: false, ready: false });
     const [toasts, setToasts] = useState([]);
@@ -1180,6 +1271,7 @@
               <${Route} path="/vips/:vipId/stats" element=${html`<${VipStats} />`} />
               <${Route} path="/stats/global" element=${html`<${GlobalStats} />`} />
               <${Route} path="/stats/real" element=${html`<${RealStats} />`} />
+              <${Route} path="/config" element=${html`<${ConfigExport} />`} />
             </${Routes}>
             <${Toasts} toasts=${toasts} onDismiss=${dismissToast} />
           </${ToastContext.Provider}>
