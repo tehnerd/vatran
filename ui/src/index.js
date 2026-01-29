@@ -470,7 +470,7 @@
                     onInput=${(e) =>
                       setInitForm({ ...initForm, local_mac: e.target.value })}
                     placeholder="11:22:33:44:55:66"
-                    required
+                    required=${initForm.healthchecking_prog_path?.trim() !== ""}
                   />
                 </label>
                 <label className="field">

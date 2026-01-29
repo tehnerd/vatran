@@ -111,7 +111,7 @@
                     value=${s.local_mac}
                     onInput=${t=>c({...s,local_mac:t.target.value})}
                     placeholder="11:22:33:44:55:66"
-                    required
+                    required=${s.healthchecking_prog_path?.trim()!==""}
                   />
                 </label>
                 <label className="field">
