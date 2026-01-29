@@ -1,32 +1,36 @@
-(()=>{(()=>{let{useEffect:P,useMemo:S,useRef:T,useState:m,useContext:J}=React,{BrowserRouter:H,Routes:M,Route:x,NavLink:R,Link:q,useParams:O,useNavigate:X}=ReactRouterDOM,r=htm.bind(React.createElement),D=React.createContext({addToast:()=>{}});function L(){return J(D)}let b={base:"/api/v1",async request(e,a={}){let u={method:a.method||"GET",headers:{"Content-Type":"application/json"}},l=`${b.base}${e}`;if(a.body!==void 0&&a.body!==null)if(u.method==="GET"){let i=new URLSearchParams;Object.entries(a.body).forEach(([p,c])=>{if(c!=null){if(Array.isArray(c)){c.forEach(h=>i.append(p,String(h)));return}if(typeof c=="object"){i.set(p,JSON.stringify(c));return}i.set(p,String(c))}});let o=i.toString();o&&(l+=`${l.includes("?")?"&":"?"}${o}`)}else u.body=JSON.stringify(a.body);let $=await fetch(l,u),g;try{g=await $.json()}catch{throw new Error("invalid JSON response")}if(!$.ok)throw new Error(g?.error?.message||`HTTP ${$.status}`);if(!g.success){let i=g.error?.message||"request failed";throw new Error(i)}return g.data},get(e,a){return b.request(e,{method:"GET",body:a})},post(e,a){return b.request(e,{method:"POST",body:a})},put(e,a){return b.request(e,{method:"PUT",body:a})},del(e,a){return b.request(e,{method:"DELETE",body:a})}};function V(e){return`${encodeURIComponent(e.address)}:${e.port}:${e.proto}`}function A(e){let a=e.split(":"),u=Number(a.pop()||0),l=Number(a.pop()||0);return{address:decodeURIComponent(a.join(":")),port:l,proto:u}}function K(e,a,u=[]){let[l,$]=m(null),[g,i]=m(""),[o,p]=m(!0);return P(()=>{let c=!0,h=async()=>{try{let d=await e();c&&($(d),i(""),p(!1))}catch(d){c&&(i(d.message||"request failed"),p(!1))}};h();let s=setInterval(h,a);return()=>{c=!1,clearInterval(s)}},u),{data:l,error:g,loading:o}}function z({path:e,body:a,intervalMs:u=1e3,limit:l=60}){let[$,g]=m([]),[i,o]=m(""),p=S(()=>JSON.stringify(a||{}),[a]);return P(()=>{if(a===null)return g([]),o(""),()=>{};let c=!0,h=async()=>{try{let d=await b.get(e,a);if(!c)return;let v=new Date().toLocaleTimeString();g(y=>y.concat({label:v,...d}).slice(-l)),o("")}catch(d){c&&o(d.message||"request failed")}};h();let s=setInterval(h,u);return()=>{c=!1,clearInterval(s)}},[e,p,u,l]),{points:$,error:i}}function W({title:e,points:a,keys:u,diff:l=!1,height:$=120,showTitle:g=!1}){let i=T(null),o=T(null);return P(()=>{if(!i.current)return;o.current||(o.current=new Chart(i.current,{type:"line",data:{labels:[],datasets:[]},options:{responsive:!0,maintainAspectRatio:!1,animation:!1,scales:{x:{grid:{display:!1}},y:{beginAtZero:!l}},plugins:{legend:{display:!0,position:"bottom"},title:{display:g&&!!e,text:e}}}}));let p=o.current,c=a.map(h=>h.label);return p.data.labels=c,p.data.datasets=u.map(h=>{let s=a.map(v=>v[h.field]||0),d=l?s.map((v,y)=>y===0?0:v-s[y-1]):s;return{label:h.label,data:d,borderColor:h.color,backgroundColor:h.fill,borderWidth:2,tension:.3}}),p.options.scales.y.beginAtZero=!l,p.options.plugins.title.display=g&&!!e,p.options.plugins.title.text=e||"",p.update(),()=>{}},[a,u,e,l,g]),P(()=>()=>{o.current&&(o.current.destroy(),o.current=null)},[]),r`<canvas ref=${i} height=${$}></canvas>`}function B({title:e,points:a,keys:u,diff:l=!1,inlineTitle:$=!0}){let[g,i]=m(!1);return r`
+(()=>{(()=>{let{useEffect:C,useMemo:S,useRef:T,useState:f,useContext:X}=React,{BrowserRouter:U,Routes:M,Route:k,NavLink:R,Link:F,useParams:O,useNavigate:Z}=ReactRouterDOM,s=htm.bind(React.createElement),D=React.createContext({addToast:()=>{}});function L(){return X(D)}let b={base:"/api/v1",async request(e,a={}){let n={method:a.method||"GET",headers:{"Content-Type":"application/json"}},l=`${b.base}${e}`;if(a.body!==void 0&&a.body!==null)if(n.method==="GET"){let o=new URLSearchParams;Object.entries(a.body).forEach(([p,c])=>{if(c!=null){if(Array.isArray(c)){c.forEach(g=>o.append(p,String(g)));return}if(typeof c=="object"){o.set(p,JSON.stringify(c));return}o.set(p,String(c))}});let i=o.toString();i&&(l+=`${l.includes("?")?"&":"?"}${i}`)}else n.body=JSON.stringify(a.body);let m=await fetch(l,n),$;try{$=await m.json()}catch{throw new Error("invalid JSON response")}if(!m.ok)throw new Error($?.error?.message||`HTTP ${m.status}`);if(!$.success){let o=$.error?.message||"request failed";throw new Error(o)}return $.data},get(e,a){return b.request(e,{method:"GET",body:a})},post(e,a){return b.request(e,{method:"POST",body:a})},put(e,a){return b.request(e,{method:"PUT",body:a})},del(e,a){return b.request(e,{method:"DELETE",body:a})}};function q(e){return`${encodeURIComponent(e.address)}:${e.port}:${e.proto}`}function A(e){let a=e.split(":"),n=Number(a.pop()||0),l=Number(a.pop()||0);return{address:decodeURIComponent(a.join(":")),port:l,proto:n}}function K(e,a,n=[]){let[l,m]=f(null),[$,o]=f(""),[i,p]=f(!0);return C(()=>{let c=!0,g=async()=>{try{let u=await e();c&&(m(u),o(""),p(!1))}catch(u){c&&(o(u.message||"request failed"),p(!1))}};g();let r=setInterval(g,a);return()=>{c=!1,clearInterval(r)}},n),{data:l,error:$,loading:i}}function V({path:e,body:a,intervalMs:n=1e3,limit:l=60}){let[m,$]=f([]),[o,i]=f(""),p=S(()=>JSON.stringify(a||{}),[a]);return C(()=>{if(a===null)return $([]),i(""),()=>{};let c=!0,g=async()=>{try{let u=await b.get(e,a);if(!c)return;let v=new Date().toLocaleTimeString();$(y=>y.concat({label:v,...u}).slice(-l)),i("")}catch(u){c&&i(u.message||"request failed")}};g();let r=setInterval(g,n);return()=>{c=!1,clearInterval(r)}},[e,p,n,l]),{points:m,error:o}}function H({title:e,points:a,keys:n,diff:l=!1,height:m=120,showTitle:$=!1}){let o=T(null),i=T(null);return C(()=>{if(!o.current)return;i.current||(i.current=new Chart(o.current,{type:"line",data:{labels:[],datasets:[]},options:{responsive:!0,maintainAspectRatio:!1,animation:!1,scales:{x:{grid:{display:!1}},y:{beginAtZero:!l}},plugins:{legend:{display:!0,position:"bottom"},title:{display:$&&!!e,text:e}}}}));let p=i.current,c=a.map(g=>g.label);return p.data.labels=c,p.data.datasets=n.map(g=>{let r=a.map(v=>v[g.field]||0),u=l?r.map((v,y)=>y===0?0:v-r[y-1]):r;return{label:g.label,data:u,borderColor:g.color,backgroundColor:g.fill,borderWidth:2,tension:.3}}),p.options.scales.y.beginAtZero=!l,p.options.plugins.title.display=$&&!!e,p.options.plugins.title.text=e||"",p.update(),()=>{}},[a,n,e,l,$]),C(()=>()=>{i.current&&(i.current.destroy(),i.current=null)},[]),s`<canvas ref=${o} height=${m}></canvas>`}function z({title:e,points:a,keys:n,diff:l=!1,inlineTitle:m=!0}){let[$,o]=f(!1);return s`
       <div className="chart-wrap">
-        <div className="chart-click" onClick=${()=>i(!0)}>
-          <${W}
+        <button className="chart-zoom-button" type="button" onClick=${()=>o(!0)}>
+          <span className="zoom-icon" aria-hidden="true">+</span>
+          Zoom
+        </button>
+        <div className="chart-click" onClick=${()=>o(!0)}>
+          <${H}
             title=${e}
             points=${a}
-            keys=${u}
+            keys=${n}
             diff=${l}
             height=${120}
-            showTitle=${$&&!!e}
+            showTitle=${m&&!!e}
           />
         </div>
-        ${g&&r`
-          <div className="chart-overlay" onClick=${()=>i(!1)}>
-            <div className="chart-modal" onClick=${o=>o.stopPropagation()}>
+        ${$&&s`
+          <div className="chart-overlay" onClick=${()=>o(!1)}>
+            <div className="chart-modal" onClick=${i=>i.stopPropagation()}>
               <div className="row chart-modal-header">
                 <div>
                   <h3>${e||"Chart"}</h3>
-                  ${l?r`<p className="muted">Per-second delta.</p>`:""}
+                  ${l?s`<p className="muted">Per-second delta.</p>`:""}
                 </div>
-                <button className="btn ghost" onClick=${()=>i(!1)}>
+                <button className="btn ghost" onClick=${()=>o(!1)}>
                   Close
                 </button>
               </div>
               <div className="chart-zoom">
-                <${W}
+                <${H}
                   title=${e}
                   points=${a}
-                  keys=${u}
+                  keys=${n}
                   diff=${l}
                   height=${360}
                   showTitle=${!1}
@@ -36,18 +40,18 @@
           </div>
         `}
       </div>
-    `}function G({children:e}){return e}function Z({toasts:e,onDismiss:a}){return r`
+    `}function G({children:e}){return e}function Y({toasts:e,onDismiss:a}){return s`
       <div className="toast-stack">
-        ${e.map(u=>r`
-            <div className=${`toast ${u.kind}`}>
-              <span>${u.message}</span>
-              <button className="toast-close" onClick=${()=>a(u.id)}>
+        ${e.map(n=>s`
+            <div className=${`toast ${n.kind}`}>
+              <span>${n.message}</span>
+              <button className="toast-close" onClick=${()=>a(n.id)}>
                 ×
               </button>
             </div>
           `)}
       </div>
-    `}function Y({status:e}){return r`
+    `}function Q({status:e}){return s`
       <header>
         <div>
           <div style=${{fontSize:20,fontWeight:700}}>Vatran</div>
@@ -71,23 +75,23 @@
           </${R}>
         </nav>
       </header>
-    `}function Q(){let{addToast:e}=L(),[a,u]=m({initialized:!1,ready:!1}),[l,$]=m([]),[g,i]=m(""),[o,p]=m(!1),[c,h]=m(!1),[s,d]=m({main_interface:"",balancer_prog_path:"",healthchecking_prog_path:"",default_mac:"",local_mac:"",root_map_path:"",root_map_pos:2,katran_src_v4:"",katran_src_v6:"",use_root_map:!1,max_vips:512,max_reals:4096,hash_func:0}),[v,y]=m({address:"",port:80,proto:6,flags:0}),f=async()=>{try{let t=await b.get("/lb/status"),I=await b.get("/vips");u(t||{initialized:!1,ready:!1}),$(I||[]),i("")}catch(t){i(t.message||"request failed")}};P(()=>{let t=!0;return(async()=>{t&&await f()})(),()=>{t=!1}},[]);let C=async t=>{t.preventDefault();try{let I={...s,root_map_pos:s.root_map_pos===""?void 0:Number(s.root_map_pos),max_vips:Number(s.max_vips),max_reals:Number(s.max_reals),hash_func:Number(s.hash_func)};await b.post("/lb/create",I),i(""),p(!1),e("Load balancer initialized.","success"),await f()}catch(I){i(I.message||"request failed"),e(I.message||"Initialize failed.","error")}},w=async t=>{t.preventDefault();try{await b.post("/vips",{...v,port:Number(v.port),proto:Number(v.proto),flags:Number(v.flags||0)}),y({address:"",port:80,proto:6,flags:0}),i(""),h(!1),e("VIP created.","success"),await f()}catch(I){i(I.message||"request failed"),e(I.message||"VIP create failed.","error")}},_=async()=>{try{await b.post("/lb/load-bpf-progs"),i(""),e("BPF programs loaded.","success"),await f()}catch(t){i(t.message||"request failed"),e(t.message||"Load BPF programs failed.","error")}},F=async()=>{try{await b.post("/lb/attach-bpf-progs"),i(""),e("BPF programs attached.","success"),await f()}catch(t){i(t.message||"request failed"),e(t.message||"Attach BPF programs failed.","error")}};return r`
+    `}function ee(){let{addToast:e}=L(),[a,n]=f({initialized:!1,ready:!1}),[l,m]=f([]),[$,o]=f(""),[i,p]=f(!1),[c,g]=f(!1),[r,u]=f({main_interface:"",balancer_prog_path:"",healthchecking_prog_path:"",default_mac:"",local_mac:"",root_map_path:"",root_map_pos:2,katran_src_v4:"",katran_src_v6:"",use_root_map:!1,max_vips:512,max_reals:4096,hash_func:0}),[v,y]=f({address:"",port:80,proto:6,flags:0}),h=async()=>{try{let t=await b.get("/lb/status"),I=await b.get("/vips");n(t||{initialized:!1,ready:!1}),m(I||[]),o("")}catch(t){o(t.message||"request failed")}};C(()=>{let t=!0;return(async()=>{t&&await h()})(),()=>{t=!1}},[]);let P=async t=>{t.preventDefault();try{let I={...r,root_map_pos:r.root_map_pos===""?void 0:Number(r.root_map_pos),max_vips:Number(r.max_vips),max_reals:Number(r.max_reals),hash_func:Number(r.hash_func)};await b.post("/lb/create",I),o(""),p(!1),e("Load balancer initialized.","success"),await h()}catch(I){o(I.message||"request failed"),e(I.message||"Initialize failed.","error")}},w=async t=>{t.preventDefault();try{await b.post("/vips",{...v,port:Number(v.port),proto:Number(v.proto),flags:Number(v.flags||0)}),y({address:"",port:80,proto:6,flags:0}),o(""),g(!1),e("VIP created.","success"),await h()}catch(I){o(I.message||"request failed"),e(I.message||"VIP create failed.","error")}},_=async()=>{try{await b.post("/lb/load-bpf-progs"),o(""),e("BPF programs loaded.","success"),await h()}catch(t){o(t.message||"request failed"),e(t.message||"Load BPF programs failed.","error")}},x=async()=>{try{await b.post("/lb/attach-bpf-progs"),o(""),e("BPF programs attached.","success"),await h()}catch(t){o(t.message||"request failed"),e(t.message||"Attach BPF programs failed.","error")}};return s`
       <main>
         <section className="card">
           <h2>Load balancer</h2>
           <p>Initialized: ${a.initialized?"yes":"no"}</p>
           <p>Ready: ${a.ready?"yes":"no"}</p>
           <div className="row">
-            ${!a.initialized&&r`
+            ${!a.initialized&&s`
               <button className="btn" onClick=${()=>p(t=>!t)}>
-                ${o?"Close":"Initialize"}
+                ${i?"Close":"Initialize"}
               </button>
             `}
-            <button className="btn secondary" onClick=${()=>h(t=>!t)}>
+            <button className="btn secondary" onClick=${()=>g(t=>!t)}>
               ${c?"Close":"Create VIP"}
             </button>
           </div>
-          ${!a.ready&&r`
+          ${!a.ready&&s`
             <div className="row" style=${{marginTop:12}}>
               <button
                 className="btn ghost"
@@ -99,20 +103,20 @@
               <button
                 className="btn ghost"
                 disabled=${!a.initialized}
-                onClick=${F}
+                onClick=${x}
               >
                 Attach BPF Programs
               </button>
             </div>
           `}
-          ${o&&r`
-            <form className="form" onSubmit=${C}>
+          ${i&&s`
+            <form className="form" onSubmit=${P}>
               <div className="form-row">
                 <label className="field">
                   <span>Main interface</span>
                   <input
-                    value=${s.main_interface}
-                    onInput=${t=>d({...s,main_interface:t.target.value})}
+                    value=${r.main_interface}
+                    onInput=${t=>u({...r,main_interface:t.target.value})}
                     placeholder="eth0"
                     required
                   />
@@ -120,8 +124,8 @@
                 <label className="field">
                   <span>Balancer prog path</span>
                   <input
-                    value=${s.balancer_prog_path}
-                    onInput=${t=>d({...s,balancer_prog_path:t.target.value})}
+                    value=${r.balancer_prog_path}
+                    onInput=${t=>u({...r,balancer_prog_path:t.target.value})}
                     placeholder="/path/to/bpf.o"
                     required
                   />
@@ -131,16 +135,16 @@
                 <label className="field">
                   <span>Healthchecking path</span>
                   <input
-                    value=${s.healthchecking_prog_path}
-                    onInput=${t=>d({...s,healthchecking_prog_path:t.target.value})}
+                    value=${r.healthchecking_prog_path}
+                    onInput=${t=>u({...r,healthchecking_prog_path:t.target.value})}
                     placeholder="/path/to/hc.o"
                   />
                 </label>
                 <label className="field">
                   <span>Default MAC</span>
                   <input
-                    value=${s.default_mac}
-                    onInput=${t=>d({...s,default_mac:t.target.value})}
+                    value=${r.default_mac}
+                    onInput=${t=>u({...r,default_mac:t.target.value})}
                     placeholder="aa:bb:cc:dd:ee:ff"
                     required
                   />
@@ -150,10 +154,10 @@
                 <label className="field">
                   <span>Local MAC</span>
                   <input
-                    value=${s.local_mac}
-                    onInput=${t=>d({...s,local_mac:t.target.value})}
+                    value=${r.local_mac}
+                    onInput=${t=>u({...r,local_mac:t.target.value})}
                     placeholder="11:22:33:44:55:66"
-                    required=${s.healthchecking_prog_path?.trim()!==""}
+                    required=${r.healthchecking_prog_path?.trim()!==""}
                   />
                 </label>
                 <label className="field">
@@ -161,8 +165,8 @@
                   <input
                     type="number"
                     min="0"
-                    value=${s.hash_func}
-                    onInput=${t=>d({...s,hash_func:t.target.value})}
+                    value=${r.hash_func}
+                    onInput=${t=>u({...r,hash_func:t.target.value})}
                   />
                 </label>
               </div>
@@ -170,8 +174,8 @@
                 <label className="field">
                   <span>Root map path</span>
                   <input
-                    value=${s.root_map_path}
-                    onInput=${t=>d({...s,root_map_path:t.target.value})}
+                    value=${r.root_map_path}
+                    onInput=${t=>u({...r,root_map_path:t.target.value})}
                     placeholder="/sys/fs/bpf/root_map"
                   />
                 </label>
@@ -180,8 +184,8 @@
                   <input
                     type="number"
                     min="0"
-                    value=${s.root_map_pos}
-                    onInput=${t=>d({...s,root_map_pos:t.target.value})}
+                    value=${r.root_map_pos}
+                    onInput=${t=>u({...r,root_map_pos:t.target.value})}
                   />
                 </label>
               </div>
@@ -189,16 +193,16 @@
                 <label className="field">
                   <span>Katran src v4</span>
                   <input
-                    value=${s.katran_src_v4}
-                    onInput=${t=>d({...s,katran_src_v4:t.target.value})}
+                    value=${r.katran_src_v4}
+                    onInput=${t=>u({...r,katran_src_v4:t.target.value})}
                     placeholder="10.0.0.1"
                   />
                 </label>
                 <label className="field">
                   <span>Katran src v6</span>
                   <input
-                    value=${s.katran_src_v6}
-                    onInput=${t=>d({...s,katran_src_v6:t.target.value})}
+                    value=${r.katran_src_v6}
+                    onInput=${t=>u({...r,katran_src_v6:t.target.value})}
                     placeholder="fc00::1"
                   />
                 </label>
@@ -209,8 +213,8 @@
                   <input
                     type="number"
                     min="1"
-                    value=${s.max_vips}
-                    onInput=${t=>d({...s,max_vips:t.target.value})}
+                    value=${r.max_vips}
+                    onInput=${t=>u({...r,max_vips:t.target.value})}
                   />
                 </label>
                 <label className="field">
@@ -218,23 +222,23 @@
                   <input
                     type="number"
                     min="1"
-                    value=${s.max_reals}
-                    onInput=${t=>d({...s,max_reals:t.target.value})}
+                    value=${r.max_reals}
+                    onInput=${t=>u({...r,max_reals:t.target.value})}
                   />
                 </label>
               </div>
               <label className="field checkbox">
                 <input
                   type="checkbox"
-                  checked=${s.use_root_map}
-                  onChange=${t=>d({...s,use_root_map:t.target.checked})}
+                  checked=${r.use_root_map}
+                  onChange=${t=>u({...r,use_root_map:t.target.checked})}
                 />
                 <span>Use root map</span>
               </label>
               <button className="btn" type="submit">Initialize LB</button>
             </form>
           `}
-          ${c&&r`
+          ${c&&s`
             <form className="form" onSubmit=${w}>
               <div className="form-row">
                 <label className="field">
@@ -277,16 +281,16 @@
               <button className="btn" type="submit">Create VIP</button>
             </form>
           `}
-          ${g&&r`<p className="error">${g}</p>`}
+          ${$&&s`<p className="error">${$}</p>`}
         </section>
         <section className="card">
           <div className="section-header">
             <h2>VIPs</h2>
-            <button className="btn ghost" onClick=${f}>Refresh</button>
+            <button className="btn ghost" onClick=${h}>Refresh</button>
           </div>
-          ${l.length===0?r`<p className="muted">No VIPs configured yet.</p>`:r`
+          ${l.length===0?s`<p className="muted">No VIPs configured yet.</p>`:s`
                 <div className="grid">
-                  ${l.map(t=>r`
+                  ${l.map(t=>s`
                       <div className="card">
                         <div style=${{fontWeight:600}}>
                           ${t.address}:${t.port} / ${t.proto}
@@ -295,15 +299,15 @@
                           Flags: ${t.flags||0}
                         </div>
                         <div className="row" style=${{marginTop:12}}>
-                          <${q} className="btn" to=${`/vips/${V(t)}`}>
+                          <${F} className="btn" to=${`/vips/${q(t)}`}>
                             Open
-                          </${q}>
-                          <${q}
+                          </${F}>
+                          <${F}
                             className="btn secondary"
-                            to=${`/vips/${V(t)}/stats`}
+                            to=${`/vips/${q(t)}/stats`}
                           >
                             Stats
-                          </${q}>
+                          </${F}>
                         </div>
                       </div>
                     `)}
@@ -311,23 +315,23 @@
               `}
         </section>
       </main>
-    `}function ee(){let{addToast:e}=L(),a=O(),u=X(),l=S(()=>A(a.vipId),[a.vipId]),[$,g]=m([]),[i,o]=m(""),[p,c]=m(""),[h,s]=m(!0),[d,v]=m({address:"",weight:100,flags:0}),[y,f]=m({}),[C,w]=m(null),[_,F]=m({flag:0,set:!0}),[t,I]=m({hash_function:0}),E=async()=>{try{let n=await b.get("/vips/reals",l);g(n||[]);let N={};(n||[]).forEach(j=>{N[j.address]=j.weight}),f(N),o(""),s(!1)}catch(n){o(n.message||"request failed"),s(!1)}},U=async()=>{try{let n=await b.get("/vips/flags",l);w(n?.flags??0),c("")}catch(n){c(n.message||"request failed")}};P(()=>{E(),U()},[a.vipId]);let ne=async n=>{try{let N=Number(y[n.address]);await b.post("/vips/reals",{vip:l,real:{address:n.address,weight:N,flags:n.flags||0}}),await E(),e("Real weight updated.","success")}catch(N){o(N.message||"request failed"),e(N.message||"Update failed.","error")}},oe=async n=>{try{await b.del("/vips/reals",{vip:l,real:{address:n.address,weight:n.weight,flags:n.flags||0}}),await E(),e("Real removed.","success")}catch(N){o(N.message||"request failed"),e(N.message||"Remove failed.","error")}},ie=async n=>{n.preventDefault();try{await b.post("/vips/reals",{vip:l,real:{address:d.address,weight:Number(d.weight),flags:Number(d.flags||0)}}),v({address:"",weight:100,flags:0}),await E(),e("Real added.","success")}catch(N){o(N.message||"request failed"),e(N.message||"Add failed.","error")}},ce=async()=>{try{await b.del("/vips",l),e("VIP deleted.","success"),u("/")}catch(n){o(n.message||"request failed"),e(n.message||"Delete failed.","error")}},de=async n=>{n.preventDefault();try{await b.put("/vips/flags",{...l,flag:Number(_.flag),set:!!_.set}),await U(),e("VIP flags updated.","success")}catch(N){c(N.message||"request failed"),e(N.message||"Flag update failed.","error")}},ue=async n=>{n.preventDefault();try{await b.put("/vips/hash-function",{...l,hash_function:Number(t.hash_function)}),e("Hash function updated.","success")}catch(N){c(N.message||"request failed"),e(N.message||"Hash update failed.","error")}};return r`
+    `}function ae(){let{addToast:e}=L(),a=O(),n=Z(),l=S(()=>A(a.vipId),[a.vipId]),[m,$]=f([]),[o,i]=f(""),[p,c]=f(""),[g,r]=f(!0),[u,v]=f({address:"",weight:100,flags:0}),[y,h]=f({}),[P,w]=f(null),[_,x]=f({flag:0,set:!0}),[t,I]=f({hash_function:0}),E=async()=>{try{let d=await b.get("/vips/reals",l);$(d||[]);let N={};(d||[]).forEach(J=>{N[J.address]=J.weight}),h(N),i(""),r(!1)}catch(d){i(d.message||"request failed"),r(!1)}},B=async()=>{try{let d=await b.get("/vips/flags",l);w(d?.flags??0),c("")}catch(d){c(d.message||"request failed")}};C(()=>{E(),B()},[a.vipId]);let ce=async d=>{try{let N=Number(y[d.address]);await b.post("/vips/reals",{vip:l,real:{address:d.address,weight:N,flags:d.flags||0}}),await E(),e("Real weight updated.","success")}catch(N){i(N.message||"request failed"),e(N.message||"Update failed.","error")}},de=async d=>{try{await b.del("/vips/reals",{vip:l,real:{address:d.address,weight:d.weight,flags:d.flags||0}}),await E(),e("Real removed.","success")}catch(N){i(N.message||"request failed"),e(N.message||"Remove failed.","error")}},ue=async d=>{d.preventDefault();try{await b.post("/vips/reals",{vip:l,real:{address:u.address,weight:Number(u.weight),flags:Number(u.flags||0)}}),v({address:"",weight:100,flags:0}),await E(),e("Real added.","success")}catch(N){i(N.message||"request failed"),e(N.message||"Add failed.","error")}},pe=async()=>{try{await b.del("/vips",l),e("VIP deleted.","success"),n("/")}catch(d){i(d.message||"request failed"),e(d.message||"Delete failed.","error")}},me=async d=>{d.preventDefault();try{await b.put("/vips/flags",{...l,flag:Number(_.flag),set:!!_.set}),await B(),e("VIP flags updated.","success")}catch(N){c(N.message||"request failed"),e(N.message||"Flag update failed.","error")}},fe=async d=>{d.preventDefault();try{await b.put("/vips/hash-function",{...l,hash_function:Number(t.hash_function)}),e("Hash function updated.","success")}catch(N){c(N.message||"request failed"),e(N.message||"Hash update failed.","error")}};return s`
       <main>
         <section className="card">
           <div className="section-header">
             <div>
               <h2>VIP Detail</h2>
               <p className="muted">${l.address}:${l.port} / ${l.proto}</p>
-              <p className="muted">Flags: ${C??"\u2014"}</p>
+              <p className="muted">Flags: ${P??"\u2014"}</p>
             </div>
             <div className="row">
-              <button className="btn ghost" onClick=${U}>Refresh flags</button>
-              <button className="btn danger" onClick=${ce}>Delete VIP</button>
+              <button className="btn ghost" onClick=${B}>Refresh flags</button>
+              <button className="btn danger" onClick=${pe}>Delete VIP</button>
             </div>
           </div>
-          ${i&&r`<p className="error">${i}</p>`}
-          ${p&&r`<p className="error">${p}</p>`}
-          ${h?r`<p className="muted">Loading reals…</p>`:r`
+          ${o&&s`<p className="error">${o}</p>`}
+          ${p&&s`<p className="error">${p}</p>`}
+          ${g?s`<p className="muted">Loading reals…</p>`:s`
                 <table className="table">
                   <thead>
                     <tr>
@@ -339,29 +343,29 @@
                     </tr>
                   </thead>
                   <tbody>
-                    ${$.map(n=>r`
+                    ${m.map(d=>s`
                         <tr>
                           <td>
                             <span
-                              className=${`dot ${Number(n.weight)>0?"ok":"bad"}`}
+                              className=${`dot ${Number(d.weight)>0?"ok":"bad"}`}
                             ></span>
                           </td>
-                          <td>${n.address}</td>
+                          <td>${d.address}</td>
                           <td>
                             <input
                               className="inline-input"
                               type="number"
                               min="0"
-                              value=${y[n.address]??n.weight}
-                              onInput=${N=>f({...y,[n.address]:N.target.value})}
+                              value=${y[d.address]??d.weight}
+                              onInput=${N=>h({...y,[d.address]:N.target.value})}
                             />
                           </td>
-                          <td>${n.flags||0}</td>
+                          <td>${d.flags||0}</td>
                           <td className="row">
-                            <button className="btn" onClick=${()=>ne(n)}>
+                            <button className="btn" onClick=${()=>ce(d)}>
                               Update
                             </button>
-                            <button className="btn ghost" onClick=${()=>oe(n)}>
+                            <button className="btn ghost" onClick=${()=>de(d)}>
                               Remove
                             </button>
                           </td>
@@ -374,21 +378,21 @@
         <section className="card">
           <h3>VIP flags & hash</h3>
           <div className="grid">
-            <form className="form" onSubmit=${de}>
+            <form className="form" onSubmit=${me}>
               <div className="form-row">
                 <label className="field">
                   <span>Flag</span>
                   <input
                     type="number"
                     value=${_.flag}
-                    onInput=${n=>F({..._,flag:n.target.value})}
+                    onInput=${d=>x({..._,flag:d.target.value})}
                   />
                 </label>
                 <label className="field">
                   <span>Set</span>
                   <select
                     value=${String(_.set)}
-                    onChange=${n=>F({..._,set:n.target.value==="true"})}
+                    onChange=${d=>x({..._,set:d.target.value==="true"})}
                   >
                     <option value="true">Set</option>
                     <option value="false">Clear</option>
@@ -397,7 +401,7 @@
               </div>
               <button className="btn" type="submit">Apply flag</button>
             </form>
-            <form className="form" onSubmit=${ue}>
+            <form className="form" onSubmit=${fe}>
               <div className="form-row">
                 <label className="field">
                   <span>Hash function</span>
@@ -405,7 +409,7 @@
                     type="number"
                     min="0"
                     value=${t.hash_function}
-                    onInput=${n=>I({...t,hash_function:n.target.value})}
+                    onInput=${d=>I({...t,hash_function:d.target.value})}
                   />
                 </label>
               </div>
@@ -415,13 +419,13 @@
         </section>
         <section className="card">
           <h3>Add real</h3>
-          <form className="form" onSubmit=${ie}>
+          <form className="form" onSubmit=${ue}>
             <div className="form-row">
               <label className="field">
                 <span>Real address</span>
                 <input
-                  value=${d.address}
-                  onInput=${n=>v({...d,address:n.target.value})}
+                  value=${u.address}
+                  onInput=${d=>v({...u,address:d.target.value})}
                   placeholder="10.0.0.1"
                   required
                 />
@@ -431,8 +435,8 @@
                 <input
                   type="number"
                   min="0"
-                  value=${d.weight}
-                  onInput=${n=>v({...d,weight:n.target.value})}
+                  value=${u.weight}
+                  onInput=${d=>v({...u,weight:d.target.value})}
                   required
                 />
               </label>
@@ -440,8 +444,8 @@
                 <span>Flags</span>
                 <input
                   type="number"
-                  value=${d.flags}
-                  onInput=${n=>v({...d,flags:n.target.value})}
+                  value=${u.flags}
+                  onInput=${d=>v({...u,flags:d.target.value})}
                 />
               </label>
             </div>
@@ -449,7 +453,7 @@
           </form>
         </section>
       </main>
-    `}function ae(){let e=O(),a=S(()=>A(e.vipId),[e.vipId]),{points:u,error:l}=z({path:"/stats/vip",body:a}),$=S(()=>[{label:"v1",field:"v1",color:"#2f4858",fill:"rgba(47,72,88,0.15)"},{label:"v2",field:"v2",color:"#d97757",fill:"rgba(217,119,87,0.2)"}],[]);return r`
+    `}function te(){let e=O(),a=S(()=>A(e.vipId),[e.vipId]),{points:n,error:l}=V({path:"/stats/vip",body:a}),m=S(()=>[{label:"v1",field:"v1",color:"#2f4858",fill:"rgba(47,72,88,0.15)"},{label:"v2",field:"v2",color:"#d97757",fill:"rgba(217,119,87,0.2)"}],[]);return s`
       <main>
         <section className="card">
           <div className="section-header">
@@ -458,36 +462,59 @@
               <p className="muted">${a.address}:${a.port} / ${a.proto}</p>
             </div>
           </div>
-          ${l&&r`<p className="error">${l}</p>`}
-          <${B} title="Traffic" points=${u} keys=${$} />
+          ${l&&s`<p className="error">${l}</p>`}
+          <${z} title="Traffic" points=${n} keys=${m} />
         </section>
       </main>
-    `}function k({title:e,path:a,diff:u=!1}){let{points:l,error:$}=z({path:a}),g=S(()=>[{label:"v1",field:"v1",color:"#2f4858",fill:"rgba(47,72,88,0.2)"},{label:"v2",field:"v2",color:"#d97757",fill:"rgba(217,119,87,0.2)"}],[]);return r`
+    `}let W=[{title:"LRU",path:"/stats/lru"},{title:"LRU Miss",path:"/stats/lru/miss"},{title:"LRU Fallback",path:"/stats/lru/fallback"},{title:"LRU Global",path:"/stats/lru/global"},{title:"XDP Total",path:"/stats/xdp/total"},{title:"XDP Pass",path:"/stats/xdp/pass"},{title:"XDP Drop",path:"/stats/xdp/drop"},{title:"XDP Tx",path:"/stats/xdp/tx"}];function j(e){return Number.isFinite(e)?`${e>0?"+":""}${e}`:"0"}function se({title:e,path:a,diff:n=!1}){let{points:l,error:m}=V({path:a}),$=S(()=>[{label:"v1",field:"v1",color:"#2f4858",fill:"rgba(47,72,88,0.2)"},{label:"v2",field:"v2",color:"#d97757",fill:"rgba(217,119,87,0.2)"}],[]);return s`
       <div className="card">
         <h3>${e}</h3>
-        ${$&&r`<p className="error">${$}</p>`}
-        <${B} title=${e} points=${l} keys=${g} diff=${u} inlineTitle=${!1} />
+        ${m&&s`<p className="error">${m}</p>`}
+        <${z} title=${e} points=${l} keys=${$} diff=${n} inlineTitle=${!1} />
       </div>
-    `}function te(){let{data:e,error:a}=K(()=>b.get("/stats/userspace"),1e3,[]);return r`
+    `}function re({title:e,path:a}){let{points:n,error:l}=V({path:a}),m=n[n.length-1]||{},$=n[n.length-2]||{},o=Number(m.v1??0),i=Number(m.v2??0),p=o-Number($.v1??0),c=i-Number($.v2??0);return s`
+      <div className="summary-card">
+        <div className="summary-title">${e}</div>
+        ${l?s`<p className="error">${l}</p>`:s`
+              <div className="summary-row">
+                <div className="stat">
+                  <span className="muted">v1 absolute</span>
+                  <strong>${o}</strong>
+                </div>
+                <div className="stat">
+                  <span className="muted">v1 delta/sec</span>
+                  <strong className=${p<0?"delta down":"delta up"}>
+                    ${j(p)}
+                  </strong>
+                </div>
+              </div>
+              <div className="summary-row">
+                <div className="stat">
+                  <span className="muted">v2 absolute</span>
+                  <strong>${i}</strong>
+                </div>
+                <div className="stat">
+                  <span className="muted">v2 delta/sec</span>
+                  <strong className=${c<0?"delta down":"delta up"}>
+                    ${j(c)}
+                  </strong>
+                </div>
+              </div>
+            `}
+      </div>
+    `}function le(){let{data:e,error:a}=K(()=>b.get("/stats/userspace"),1e3,[]);return s`
       <main>
         <section className="card">
           <h2>Global Stats</h2>
           <p className="muted">Polling every second. Charts show per-second deltas.</p>
         </section>
         <section className="grid">
-          <${k} title="LRU" path="/stats/lru" diff=${!0} />
-          <${k} title="LRU Miss" path="/stats/lru/miss" diff=${!0} />
-          <${k} title="LRU Fallback" path="/stats/lru/fallback" diff=${!0} />
-          <${k} title="LRU Global" path="/stats/lru/global" diff=${!0} />
-          <${k} title="XDP Total" path="/stats/xdp/total" diff=${!0} />
-          <${k} title="XDP Pass" path="/stats/xdp/pass" diff=${!0} />
-          <${k} title="XDP Drop" path="/stats/xdp/drop" diff=${!0} />
-          <${k} title="XDP Tx" path="/stats/xdp/tx" diff=${!0} />
+          ${W.map(n=>s`<${se} title=${n.title} path=${n.path} diff=${!0} />`)}
         </section>
         <section className="card">
           <h3>Userspace</h3>
-          ${a&&r`<p className="error">${a}</p>`}
-          ${e?r`
+          ${a&&s`<p className="error">${a}</p>`}
+          ${e?s`
                 <div className="row">
                   <div className="stat">
                     <span className="muted">BPF failed calls</span>
@@ -498,22 +525,33 @@
                     <strong>${e.addr_validation_failed??0}</strong>
                   </div>
                 </div>
-              `:r`<p className="muted">Waiting for data…</p>`}
+              `:s`<p className="muted">Waiting for data…</p>`}
+        </section>
+        <section className="card">
+          <div className="section-header">
+            <div>
+              <h3>Absolute & Rate of Change</h3>
+              <p className="muted">Latest value and per-second delta.</p>
+            </div>
+          </div>
+          <div className="summary-grid">
+            ${W.map(n=>s`<${re} title=${n.title} path=${n.path} />`)}
+          </div>
         </section>
       </main>
-    `}function se(){let[e,a]=m([]),[u,l]=m(""),[$,g]=m([]),[i,o]=m(""),[p,c]=m(null),[h,s]=m("");P(()=>{let f=!0;return(async()=>{try{let w=await b.get("/vips");if(!f)return;a(w||[]),!u&&w&&w.length>0&&l(V(w[0]))}catch(w){f&&s(w.message||"request failed")}})(),()=>{f=!1}},[]),P(()=>{if(!u)return;let f=A(u),C=!0;return(async()=>{try{let _=await b.get("/vips/reals",f);if(!C)return;g(_||[]),_&&_.length>0?o(F=>F||_[0].address):o(""),s("")}catch(_){C&&s(_.message||"request failed")}})(),()=>{C=!1}},[u]),P(()=>{if(!i){c(null);return}let f=!0;return(async()=>{try{let w=await b.get("/reals/index",{address:i});if(!f)return;c(w?.index??null),s("")}catch(w){f&&s(w.message||"request failed")}})(),()=>{f=!1}},[i]);let{points:d,error:v}=z({path:"/stats/real",body:p!==null?{index:p}:null}),y=S(()=>[{label:"v1",field:"v1",color:"#2f4858",fill:"rgba(47,72,88,0.2)"},{label:"v2",field:"v2",color:"#d97757",fill:"rgba(217,119,87,0.2)"}],[]);return r`
+    `}function ne(){let[e,a]=f([]),[n,l]=f(""),[m,$]=f([]),[o,i]=f(""),[p,c]=f(null),[g,r]=f("");C(()=>{let h=!0;return(async()=>{try{let w=await b.get("/vips");if(!h)return;a(w||[]),!n&&w&&w.length>0&&l(q(w[0]))}catch(w){h&&r(w.message||"request failed")}})(),()=>{h=!1}},[]),C(()=>{if(!n)return;let h=A(n),P=!0;return(async()=>{try{let _=await b.get("/vips/reals",h);if(!P)return;$(_||[]),_&&_.length>0?i(x=>x||_[0].address):i(""),r("")}catch(_){P&&r(_.message||"request failed")}})(),()=>{P=!1}},[n]),C(()=>{if(!o){c(null);return}let h=!0;return(async()=>{try{let w=await b.get("/reals/index",{address:o});if(!h)return;c(w?.index??null),r("")}catch(w){h&&r(w.message||"request failed")}})(),()=>{h=!1}},[o]);let{points:u,error:v}=V({path:"/stats/real",body:p!==null?{index:p}:null}),y=S(()=>[{label:"v1",field:"v1",color:"#2f4858",fill:"rgba(47,72,88,0.2)"},{label:"v2",field:"v2",color:"#d97757",fill:"rgba(217,119,87,0.2)"}],[]);return s`
       <main>
         <section className="card">
           <h2>Per-Real Stats</h2>
           <p className="muted">Select a VIP and real address to chart.</p>
-          ${h&&r`<p className="error">${h}</p>`}
+          ${g&&s`<p className="error">${g}</p>`}
           <div className="form-row">
             <label className="field">
               <span>VIP</span>
-              <select value=${u} onChange=${f=>l(f.target.value)}>
-                ${e.map(f=>r`
-                    <option value=${V(f)}>
-                      ${f.address}:${f.port} / ${f.proto}
+              <select value=${n} onChange=${h=>l(h.target.value)}>
+                ${e.map(h=>s`
+                    <option value=${q(h)}>
+                      ${h.address}:${h.port} / ${h.proto}
                     </option>
                   `)}
               </select>
@@ -521,12 +559,12 @@
             <label className="field">
               <span>Real</span>
               <select
-                value=${i}
-                onChange=${f=>o(f.target.value)}
-                disabled=${$.length===0}
+                value=${o}
+                onChange=${h=>i(h.target.value)}
+                disabled=${m.length===0}
               >
-                ${$.map(f=>r`
-                    <option value=${f.address}>${f.address}</option>
+                ${m.map(h=>s`
+                    <option value=${h.address}>${h.address}</option>
                   `)}
               </select>
             </label>
@@ -538,11 +576,11 @@
         </section>
         <section className="card">
           <h3>Real stats</h3>
-          ${v&&r`<p className="error">${v}</p>`}
-          ${p===null?r`<p className="muted">Select a real to start polling.</p>`:r`<${B} points=${d} keys=${y} />`}
+          ${v&&s`<p className="error">${v}</p>`}
+          ${p===null?s`<p className="muted">Select a real to start polling.</p>`:s`<${z} points=${u} keys=${y} />`}
         </section>
       </main>
-    `}function re(){let{addToast:e}=L(),[a,u]=m(""),[l,$]=m(""),[g,i]=m(!0),[o,p]=m(""),c=T(!0),h=async()=>{if(c.current){i(!0),$("");try{let d=await fetch(`${b.base}/config/export`,{headers:{Accept:"application/x-yaml"}});if(!d.ok){let y=`HTTP ${d.status}`;try{y=(await d.json())?.error?.message||y}catch{}throw new Error(y)}let v=await d.text();if(!c.current)return;u(v||""),p(new Date().toLocaleString())}catch(d){c.current&&$(d.message||"request failed")}finally{c.current&&i(!1)}}},s=async()=>{if(a)try{await navigator.clipboard.writeText(a),e("Config copied to clipboard","info")}catch{e("Failed to copy config","error")}};return P(()=>(c.current=!0,h(),()=>{c.current=!1}),[]),r`
+    `}function oe(){let{addToast:e}=L(),[a,n]=f(""),[l,m]=f(""),[$,o]=f(!0),[i,p]=f(""),c=T(!0),g=async()=>{if(c.current){o(!0),m("");try{let u=await fetch(`${b.base}/config/export`,{headers:{Accept:"application/x-yaml"}});if(!u.ok){let y=`HTTP ${u.status}`;try{y=(await u.json())?.error?.message||y}catch{}throw new Error(y)}let v=await u.text();if(!c.current)return;n(v||""),p(new Date().toLocaleString())}catch(u){c.current&&m(u.message||"request failed")}finally{c.current&&o(!1)}}},r=async()=>{if(a)try{await navigator.clipboard.writeText(a),e("Config copied to clipboard","info")}catch{e("Failed to copy config","error")}};return C(()=>(c.current=!0,g(),()=>{c.current=!1}),[]),s`
       <main>
         <section className="card">
           <div className="section-header">
@@ -551,34 +589,34 @@
               <p className="muted">Exported from /api/v1/config/export</p>
             </div>
             <div className="row">
-              <button className="btn ghost" onClick=${s} disabled=${!a}>
+              <button className="btn ghost" onClick=${r} disabled=${!a}>
                 Copy YAML
               </button>
-              <button className="btn" onClick=${h} disabled=${g}>
+              <button className="btn" onClick=${g} disabled=${$}>
                 Refresh
               </button>
             </div>
           </div>
-          ${l&&r`<p className="error">${l}</p>`}
-          ${g?r`<p className="muted">Loading config...</p>`:a?r`<pre className="yaml-view">${a}</pre>`:r`<p className="muted">No config data returned.</p>`}
-          ${o&&r`<p className="muted">Last fetched ${o}</p>`}
+          ${l&&s`<p className="error">${l}</p>`}
+          ${$?s`<p className="muted">Loading config...</p>`:a?s`<pre className="yaml-view">${a}</pre>`:s`<p className="muted">No config data returned.</p>`}
+          ${i&&s`<p className="muted">Last fetched ${i}</p>`}
         </section>
       </main>
-    `}function le(){let[e,a]=m({initialized:!1,ready:!1}),[u,l]=m([]),$=T({}),g=(o,p="info")=>{let c=`${Date.now()}-${Math.random().toString(16).slice(2)}`;l(h=>h.concat({id:c,message:o,kind:p})),$.current[c]=setTimeout(()=>{l(h=>h.filter(s=>s.id!==c)),delete $.current[c]},4e3)},i=o=>{$.current[o]&&(clearTimeout($.current[o]),delete $.current[o]),l(p=>p.filter(c=>c.id!==o))};return P(()=>{let o=!0,p=async()=>{try{let h=await b.get("/lb/status");o&&a(h||{initialized:!1,ready:!1})}catch{o&&a({initialized:!1,ready:!1})}};p();let c=setInterval(p,5e3);return()=>{o=!1,clearInterval(c)}},[]),r`
-      <${H}>
+    `}function ie(){let[e,a]=f({initialized:!1,ready:!1}),[n,l]=f([]),m=T({}),$=(i,p="info")=>{let c=`${Date.now()}-${Math.random().toString(16).slice(2)}`;l(g=>g.concat({id:c,message:i,kind:p})),m.current[c]=setTimeout(()=>{l(g=>g.filter(r=>r.id!==c)),delete m.current[c]},4e3)},o=i=>{m.current[i]&&(clearTimeout(m.current[i]),delete m.current[i]),l(p=>p.filter(c=>c.id!==i))};return C(()=>{let i=!0,p=async()=>{try{let g=await b.get("/lb/status");i&&a(g||{initialized:!1,ready:!1})}catch{i&&a({initialized:!1,ready:!1})}};p();let c=setInterval(p,5e3);return()=>{i=!1,clearInterval(c)}},[]),s`
+      <${U}>
         <${G}>
-          <${D.Provider} value=${{addToast:g}}>
-            <${Y} status=${e} />
+          <${D.Provider} value=${{addToast:$}}>
+            <${Q} status=${e} />
             <${M}>
-              <${x} path="/" element=${r`<${Q} />`} />
-              <${x} path="/vips/:vipId" element=${r`<${ee} />`} />
-              <${x} path="/vips/:vipId/stats" element=${r`<${ae} />`} />
-              <${x} path="/stats/global" element=${r`<${te} />`} />
-              <${x} path="/stats/real" element=${r`<${se} />`} />
-              <${x} path="/config" element=${r`<${re} />`} />
+              <${k} path="/" element=${s`<${ee} />`} />
+              <${k} path="/vips/:vipId" element=${s`<${ae} />`} />
+              <${k} path="/vips/:vipId/stats" element=${s`<${te} />`} />
+              <${k} path="/stats/global" element=${s`<${le} />`} />
+              <${k} path="/stats/real" element=${s`<${ne} />`} />
+              <${k} path="/config" element=${s`<${oe} />`} />
             </${M}>
-            <${Z} toasts=${u} onDismiss=${i} />
+            <${Y} toasts=${n} onDismiss=${o} />
           </${D.Provider}>
         </${G}>
-      </${H}>
-    `}ReactDOM.createRoot(document.getElementById("root")).render(r`<${le} />`)})();})();
+      </${U}>
+    `}ReactDOM.createRoot(document.getElementById("root")).render(s`<${ie} />`)})();})();

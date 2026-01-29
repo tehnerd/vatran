@@ -52,6 +52,7 @@ main {
   border: 1px solid #ece6dc;
   border-radius: 14px;
   padding: 16px;
+  position: relative;
   box-shadow: 0 8px 18px rgba(47, 41, 34, 0.08);
 }
 
@@ -62,7 +63,39 @@ main {
 }
 
 .chart-wrap {
-  position: relative;
+  position: static;
+}
+
+.chart-zoom-button {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #e0d3c5;
+  background: #fffdf7;
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  cursor: zoom-in;
+  box-shadow: 0 6px 14px rgba(45, 35, 24, 0.12);
+}
+
+.chart-zoom-button:hover {
+  border-color: #d1c0af;
+  transform: translateY(-1px);
+}
+
+.chart-zoom-button:focus-visible {
+  outline: 2px solid #d97757;
+  outline-offset: 2px;
+}
+
+.zoom-icon {
+  font-size: 13px;
 }
 
 .chart-click {
@@ -106,6 +139,45 @@ main {
 .chart-zoom canvas {
   width: 100% !important;
   height: 100% !important;
+}
+
+.summary-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.summary-card {
+  border: 1px solid #ece1d4;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fffbf6;
+  display: grid;
+  gap: 10px;
+}
+
+.summary-title {
+  font-weight: 700;
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.summary-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.delta {
+  font-variant-numeric: tabular-nums;
+}
+
+.delta.up {
+  color: #1f6f3b;
+}
+
+.delta.down {
+  color: #b23a2f;
 }
 
 .status-pill {

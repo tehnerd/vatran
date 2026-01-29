@@ -231,6 +231,10 @@
 
     return html`
       <div className="chart-wrap">
+        <button className="chart-zoom-button" type="button" onClick=${() => setZoomed(true)}>
+          <span className="zoom-icon" aria-hidden="true">+</span>
+          Zoom
+        </button>
         <div className="chart-click" onClick=${() => setZoomed(true)}>
           <${ChartCanvas}
             title=${title}
@@ -975,6 +979,23 @@
     `;
   }
 
+  const GLOBAL_STAT_ITEMS = [
+    { title: "LRU", path: "/stats/lru" },
+    { title: "LRU Miss", path: "/stats/lru/miss" },
+    { title: "LRU Fallback", path: "/stats/lru/fallback" },
+    { title: "LRU Global", path: "/stats/lru/global" },
+    { title: "XDP Total", path: "/stats/xdp/total" },
+    { title: "XDP Pass", path: "/stats/xdp/pass" },
+    { title: "XDP Drop", path: "/stats/xdp/drop" },
+    { title: "XDP Tx", path: "/stats/xdp/tx" },
+  ];
+
+  function formatDelta(value) {
+    if (!Number.isFinite(value)) return "0";
+    const sign = value > 0 ? "+" : "";
+    return `${sign}${value}`;
+  }
+
   function StatPanel({ title, path, diff = false }) {
     const { points, error } = useStatSeries({ path });
     const keys = useMemo(
@@ -994,6 +1015,50 @@
     `;
   }
 
+  function StatSummaryCard({ title, path }) {
+    const { points, error } = useStatSeries({ path });
+    const latest = points[points.length - 1] || {};
+    const prev = points[points.length - 2] || {};
+    const v1 = Number(latest.v1 ?? 0);
+    const v2 = Number(latest.v2 ?? 0);
+    const d1 = v1 - Number(prev.v1 ?? 0);
+    const d2 = v2 - Number(prev.v2 ?? 0);
+
+    return html`
+      <div className="summary-card">
+        <div className="summary-title">${title}</div>
+        ${error
+          ? html`<p className="error">${error}</p>`
+          : html`
+              <div className="summary-row">
+                <div className="stat">
+                  <span className="muted">v1 absolute</span>
+                  <strong>${v1}</strong>
+                </div>
+                <div className="stat">
+                  <span className="muted">v1 delta/sec</span>
+                  <strong className=${d1 < 0 ? "delta down" : "delta up"}>
+                    ${formatDelta(d1)}
+                  </strong>
+                </div>
+              </div>
+              <div className="summary-row">
+                <div className="stat">
+                  <span className="muted">v2 absolute</span>
+                  <strong>${v2}</strong>
+                </div>
+                <div className="stat">
+                  <span className="muted">v2 delta/sec</span>
+                  <strong className=${d2 < 0 ? "delta down" : "delta up"}>
+                    ${formatDelta(d2)}
+                  </strong>
+                </div>
+              </div>
+            `}
+      </div>
+    `;
+  }
+
   function GlobalStats() {
     const { data: userspace, error: userspaceError } = usePolling(
       () => api.get("/stats/userspace"),
@@ -1008,14 +1073,9 @@
           <p className="muted">Polling every second. Charts show per-second deltas.</p>
         </section>
         <section className="grid">
-          <${StatPanel} title="LRU" path="/stats/lru" diff=${true} />
-          <${StatPanel} title="LRU Miss" path="/stats/lru/miss" diff=${true} />
-          <${StatPanel} title="LRU Fallback" path="/stats/lru/fallback" diff=${true} />
-          <${StatPanel} title="LRU Global" path="/stats/lru/global" diff=${true} />
-          <${StatPanel} title="XDP Total" path="/stats/xdp/total" diff=${true} />
-          <${StatPanel} title="XDP Pass" path="/stats/xdp/pass" diff=${true} />
-          <${StatPanel} title="XDP Drop" path="/stats/xdp/drop" diff=${true} />
-          <${StatPanel} title="XDP Tx" path="/stats/xdp/tx" diff=${true} />
+          ${GLOBAL_STAT_ITEMS.map(
+            (item) => html`<${StatPanel} title=${item.title} path=${item.path} diff=${true} />`
+          )}
         </section>
         <section className="card">
           <h3>Userspace</h3>
@@ -1034,6 +1094,19 @@
                 </div>
               `
             : html`<p className="muted">Waiting for data…</p>`}
+        </section>
+        <section className="card">
+          <div className="section-header">
+            <div>
+              <h3>Absolute & Rate of Change</h3>
+              <p className="muted">Latest value and per-second delta.</p>
+            </div>
+          </div>
+          <div className="summary-grid">
+            ${GLOBAL_STAT_ITEMS.map(
+              (item) => html`<${StatSummaryCard} title=${item.title} path=${item.path} />`
+            )}
+          </div>
         </section>
       </main>
     `;
