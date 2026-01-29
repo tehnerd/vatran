@@ -1,0 +1,13 @@
+diff --git a/build_katran.sh b/build_katran.sh
+index 034b58fa..5102a5a3 100755
+--- a/build_katran.sh
++++ b/build_katran.sh
+@@ -621,7 +621,7 @@ build_katran() {
+     fi
+ 
+     # Run CMake with the constructed flags
+-    cmake $CMAKE_FLAGS ../..
++    cmake $CMAKE_FLAGS ../../external/katran/
+ 
+     make -j "$NCPUS"
+     popd

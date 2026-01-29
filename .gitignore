@@ -1,4 +1,6 @@
 _build/
+_build_bak/
+_build_go/
 plan.md
 thirdparty/
 go/cmd/katran-server/katran-server

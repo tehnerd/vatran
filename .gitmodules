@@ -1,0 +1,3 @@
+[submodule "external/katran"]
+	path = external/katran
+	url = https://github.com/facebookincubator/katran.git

@@ -1,105 +1,40 @@
-# Copyright (C) 2018-present, Facebook, Inc.
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; version 2 of the License.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+cmake_minimum_required(VERSION 3.9)
+project(vatran VERSION 1.0.0 LANGUAGES C CXX)
 
-cmake_minimum_required(VERSION 3.5)
+# Option to build katran from submodule or use pre-built
+option(BUILD_KATRAN_FROM_SOURCE "Build katran from submodule (requires folly, glog, etc)" OFF)
 
-# C API source files
-set(KATRAN_CAPI_SOURCES
-    src/katran_capi.cpp
-)
+if(BUILD_KATRAN_FROM_SOURCE)
+    # Set katran-specific variables before adding subdirectory
+    set(KATRAN_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/katran")
 
-# C API header files
-set(KATRAN_CAPI_HEADERS
-    include/katran_capi.h
-    include/katran_capi_types.h
-)
+    # Build katran from submodule
+    # This brings in: katranlb, bpfadapter, chhelpers, iphelpers, pcapwriter, katransimulator
+    add_subdirectory(external/katran)
+else()
+    # Use pre-built katran library
+    # Expects KATRAN_INSTALL_DIR to point to katran installation
+    # e.g., cmake -DKATRAN_INSTALL_DIR=/path/to/katran/install ..
+    if(NOT DEFINED KATRAN_INSTALL_DIR)
+        # Default: assume katran is built via build_katran.sh in _build/build directory
+        set(KATRAN_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/_build/build" CACHE PATH "Path to katran installation")
+    endif()
 
-# Shared library
-#add_library(katran_capi SHARED ${KATRAN_CAPI_SOURCES})
+    set(KATRAN_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/katran")
 
-# Static library
-add_library(katran_capi_static STATIC ${KATRAN_CAPI_SOURCES})
+    # Find required dependencies
+    find_package(folly CONFIG REQUIRED)
+    find_package(Glog REQUIRED)
+    find_package(Gflags REQUIRED)
 
-# Configure both targets
-foreach(target katran_capi_static)
-    target_include_directories(${target}
-        PUBLIC
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-            $<INSTALL_INTERFACE:include>
-        PRIVATE
-            ${KATRAN_INCLUDE_DIR}
-            ${FOLLY_INCLUDE_DIR}
-    )
+    # Import katran libraries
+    foreach(lib katranlb bpfadapter chhelpers iphelpers pcapwriter katransimulator murmur3)
+        add_library(${lib} STATIC IMPORTED)
+        set_target_properties(${lib} PROPERTIES
+            IMPORTED_LOCATION "${KATRAN_INSTALL_DIR}/katran/lib/lib${lib}.a"
+        )
+    endforeach()
+endif()
 
-    target_link_libraries(${target}
-	    -Wl,--start-group
-            katranlb
-            Folly::folly
-	    bpfadapter
-	    chhelpers
-	    iphelpers
-	    pcapwriter
-	    katransimulator
-	    ${GFLAGS}
-	    ${PTHREAD}
-	    -Wl,--end-group
-    )
-
-    set_target_properties(${target} PROPERTIES
-        CXX_STANDARD 20
-        CXX_STANDARD_REQUIRED ON
-    )
-endforeach()
-
-# Simple C smoke test binary for the C API (testing mode, no BPF load).
-add_executable(katran_capi_smoke src/katran_capi_smoke.c)
-target_include_directories(katran_capi_smoke
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-target_link_libraries(katran_capi_smoke
-    katran_capi_static
-)
-# Linker must be C++ because katran_capi_static depends on C++ libs.
-set_target_properties(katran_capi_smoke PROPERTIES
-    LINKER_LANGUAGE CXX
-)
-
-# Shared library versioning
-#set_target_properties(katran_capi PROPERTIES
-#    VERSION 1.0.0
-#    SOVERSION 1
-#)
-
-# Installation rules
-install(
-    FILES ${KATRAN_CAPI_HEADERS}
-    DESTINATION include/katran/capi
-)
-
-install(
-    TARGETS katran_capi_static
-    EXPORT katran-capi-exports
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-    RUNTIME DESTINATION bin
-)
-
-install(
-    EXPORT katran-capi-exports
-    FILE KatranCapiTargets.cmake
-    NAMESPACE katran::
-    DESTINATION lib/cmake/katran
-)
+# Include Vatran build rules
+include(vatran.cmake)

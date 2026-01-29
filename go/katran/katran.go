@@ -18,7 +18,7 @@ package katran
 /*
 #cgo CFLAGS: -I${SRCDIR}/../../include
 #cgo LDFLAGS: -Wl,--start-group  -lfolly -lglog -lgflags -lpthread -ldl -lbpf -lstdc++ -lm -lelf -lz -levent -liberty -ldouble-conversion -lzstd -lmnl -lfmt -lunwind
-#cgo LDFLAGS: -L${SRCDIR}/../../_build -lkatran_capi_static -lkatranlb -lpcapwriter -lbpfadapter -liphelpers -lchhelpers -lkatransimulator -lmurmur3 -Wl,--end-group
+#cgo LDFLAGS: -L${SRCDIR}/../../_build_go -lkatran_capi_static -lkatranlb -lpcapwriter -lbpfadapter -liphelpers -lchhelpers -lkatransimulator -lmurmur3 -Wl,--end-group
 #include "katran_capi.h"
 #include <stdlib.h>
 */
