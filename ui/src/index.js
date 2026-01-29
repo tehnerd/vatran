@@ -162,7 +162,7 @@
     return { points, error };
   }
 
-  function StatChart({ title, points, keys }) {
+  function ChartCanvas({ title, points, keys, diff = false, height = 120, showTitle = false }) {
     const canvasRef = useRef(null);
     const chartRef = useRef(null);
 
@@ -177,14 +177,15 @@
           },
           options: {
             responsive: true,
+            maintainAspectRatio: false,
             animation: false,
             scales: {
               x: { grid: { display: false } },
-              y: { beginAtZero: true },
+              y: { beginAtZero: !diff },
             },
             plugins: {
               legend: { display: true, position: "bottom" },
-              title: { display: Boolean(title), text: title },
+              title: { display: showTitle && Boolean(title), text: title },
             },
           },
         });
@@ -192,17 +193,26 @@
       const chart = chartRef.current;
       const labels = points.map((p) => p.label);
       chart.data.labels = labels;
-      chart.data.datasets = keys.map((key) => ({
-        label: key.label,
-        data: points.map((p) => p[key.field] || 0),
-        borderColor: key.color,
-        backgroundColor: key.fill,
-        borderWidth: 2,
-        tension: 0.3,
-      }));
+      chart.data.datasets = keys.map((key) => {
+        const values = points.map((p) => p[key.field] || 0);
+        const data = diff
+          ? values.map((value, index) => (index === 0 ? 0 : value - values[index - 1]))
+          : values;
+        return {
+          label: key.label,
+          data,
+          borderColor: key.color,
+          backgroundColor: key.fill,
+          borderWidth: 2,
+          tension: 0.3,
+        };
+      });
+      chart.options.scales.y.beginAtZero = !diff;
+      chart.options.plugins.title.display = showTitle && Boolean(title);
+      chart.options.plugins.title.text = title || "";
       chart.update();
       return () => {};
-    }, [points, keys, title]);
+    }, [points, keys, title, diff, showTitle]);
 
     useEffect(() => {
       return () => {
@@ -213,7 +223,52 @@
       };
     }, []);
 
-    return html`<canvas ref=${canvasRef} height="120"></canvas>`;
+    return html`<canvas ref=${canvasRef} height=${height}></canvas>`;
+  }
+
+  function StatChart({ title, points, keys, diff = false, inlineTitle = true }) {
+    const [zoomed, setZoomed] = useState(false);
+
+    return html`
+      <div className="chart-wrap">
+        <div className="chart-click" onClick=${() => setZoomed(true)}>
+          <${ChartCanvas}
+            title=${title}
+            points=${points}
+            keys=${keys}
+            diff=${diff}
+            height=${120}
+            showTitle=${inlineTitle && Boolean(title)}
+          />
+        </div>
+        ${zoomed &&
+        html`
+          <div className="chart-overlay" onClick=${() => setZoomed(false)}>
+            <div className="chart-modal" onClick=${(e) => e.stopPropagation()}>
+              <div className="row chart-modal-header">
+                <div>
+                  <h3>${title || "Chart"}</h3>
+                  ${diff ? html`<p className="muted">Per-second delta.</p>` : ""}
+                </div>
+                <button className="btn ghost" onClick=${() => setZoomed(false)}>
+                  Close
+                </button>
+              </div>
+              <div className="chart-zoom">
+                <${ChartCanvas}
+                  title=${title}
+                  points=${points}
+                  keys=${keys}
+                  diff=${diff}
+                  height=${360}
+                  showTitle=${false}
+                />
+              </div>
+            </div>
+          </div>
+        `}
+      </div>
+    `;
   }
 
   function AuthGate({ children }) {
@@ -283,7 +338,7 @@
       katran_src_v4: "",
       katran_src_v6: "",
       use_root_map: false,
-      max_vips: 1024,
+      max_vips: 512,
       max_reals: 4096,
       hash_func: 0,
     });
@@ -966,7 +1021,7 @@
     `;
   }
 
-  function StatPanel({ title, path }) {
+  function StatPanel({ title, path, diff = false }) {
     const { points, error } = useStatSeries({ path });
     const keys = useMemo(
       () => [
@@ -980,7 +1035,7 @@
       <div className="card">
         <h3>${title}</h3>
         ${error && html`<p className="error">${error}</p>`}
-        <${StatChart} points=${points} keys=${keys} />
+        <${StatChart} title=${title} points=${points} keys=${keys} diff=${diff} inlineTitle=${false} />
       </div>
     `;
   }
@@ -996,17 +1051,17 @@
       <main>
         <section className="card">
           <h2>Global Stats</h2>
-          <p className="muted">Polling every second.</p>
+          <p className="muted">Polling every second. Charts show per-second deltas.</p>
         </section>
         <section className="grid">
-          <${StatPanel} title="LRU" path="/stats/lru" />
-          <${StatPanel} title="LRU Miss" path="/stats/lru/miss" />
-          <${StatPanel} title="LRU Fallback" path="/stats/lru/fallback" />
-          <${StatPanel} title="LRU Global" path="/stats/lru/global" />
-          <${StatPanel} title="XDP Total" path="/stats/xdp/total" />
-          <${StatPanel} title="XDP Pass" path="/stats/xdp/pass" />
-          <${StatPanel} title="XDP Drop" path="/stats/xdp/drop" />
-          <${StatPanel} title="XDP Tx" path="/stats/xdp/tx" />
+          <${StatPanel} title="LRU" path="/stats/lru" diff=${true} />
+          <${StatPanel} title="LRU Miss" path="/stats/lru/miss" diff=${true} />
+          <${StatPanel} title="LRU Fallback" path="/stats/lru/fallback" diff=${true} />
+          <${StatPanel} title="LRU Global" path="/stats/lru/global" diff=${true} />
+          <${StatPanel} title="XDP Total" path="/stats/xdp/total" diff=${true} />
+          <${StatPanel} title="XDP Pass" path="/stats/xdp/pass" diff=${true} />
+          <${StatPanel} title="XDP Drop" path="/stats/xdp/drop" diff=${true} />
+          <${StatPanel} title="XDP Tx" path="/stats/xdp/tx" diff=${true} />
         </section>
         <section className="card">
           <h3>Userspace</h3>
