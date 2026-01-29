@@ -267,6 +267,9 @@ func requestToConfig(req *models.CreateLBRequest, bpfProgDir string) *katran.Con
 	}
 	if req.EnableHC != nil {
 		cfg.EnableHC = *req.EnableHC
+	} else {
+		// Default: EnableHC is true if and only if HealthcheckingProgPath is non-empty
+		cfg.EnableHC = cfg.HealthcheckingProgPath != ""
 	}
 	if req.TunnelBasedHCEncap != nil {
 		cfg.TunnelBasedHCEncap = *req.TunnelBasedHCEncap
