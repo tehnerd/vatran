@@ -16,6 +16,9 @@ TODOs (in no particular order):
 4. Proper auth workflow (https + login + oauth2 for cli clients etc)
 5. Docker image for ease of use <- Done
 
+Docker package: https://github.com/tehnerd/vatran/pkgs/container/vatran
+How to install/run : https://github.com/tehnerd/vatran/blob/master/BUILD.md 
+
 ## Abstract
 
 Vatran is an HTTP server frontend for the Katran load balancer. It exposes a REST API and optional web UI for

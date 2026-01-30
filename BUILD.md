@@ -1,4 +1,5 @@
-Local:
+```
+Local build:
 1. scripts/setup_submodules.sh
 2. ./external/katran/build_bpf_modules_opensource.sh -s ./external/katran/
 3.
@@ -18,3 +19,4 @@ With Docker (after everything locally build):
 2. docker build -t vatran:latest .
 3. docker run --network host  --user=root --ulimit memlock=-1 --cap-add=CAP_BPF --cap-add=CAP_NET_ADMIN   --cap-add=CAP_PERFMON --rm -v <path_to_config_yaml>:/config.yaml vatran:latest . 
 or just run w/o -v if you do not have config and want to use UI to configure everything
+```
