@@ -1,8 +1,10 @@
 # Vatran
-
+![project logo](vatran.png)
 ## Note from Author (aka tehnerd; the only non-vibecoded section of this project)
 This project is fully vibecoded as i'm just fooling around with this brave new world of tooling. So use/play with
 it at your own risk.
+
+name of the project is Vibecoded Katran - vatran
 
 If you want to create a PR etc - dont. Since i could vibecode it as well. It is preferable just to add in Issue
 w/ detailed feature you are missing/want to see implemented here.
