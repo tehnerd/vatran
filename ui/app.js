@@ -356,6 +356,7 @@
     showTitle = false,
     selectedLabel = null,
     onPointSelect = null,
+    onLegendSelect = null,
   }) {
     const canvasRef = useRef(null);
     const chartRef = useRef(null);
@@ -417,12 +418,19 @@
         const label = chart.data.datasets?.[index]?.label;
         if (label) onPointSelect(label);
       };
+      if (chart.options.plugins && chart.options.plugins.legend) {
+        chart.options.plugins.legend.onClick = (event, legendItem) => {
+          if (!onLegendSelect) return;
+          const label = legendItem?.text;
+          if (label) onLegendSelect(label);
+        };
+      }
       chart.options.scales.y.beginAtZero = !diff;
       chart.options.plugins.title.display = showTitle && Boolean(title);
       chart.options.plugins.title.text = title || "";
       chart.update();
       return () => {};
-    }, [points, keys, title, diff, showTitle, selectedLabel, onPointSelect]);
+    }, [points, keys, title, diff, showTitle, selectedLabel, onPointSelect, onLegendSelect]);
 
     useEffect(() => {
       return () => {
@@ -472,6 +480,13 @@
                 suppressZoomRef.current = false;
               }, 0);
             }}
+            onLegendSelect=${(label) => {
+              setSelectedLabel((prev) => (prev === label ? null : label));
+              suppressZoomRef.current = true;
+              setTimeout(() => {
+                suppressZoomRef.current = false;
+              }, 0);
+            }}
           />
         </div>
         ${zoomed &&
@@ -497,6 +512,9 @@
                   showTitle=${false}
                   selectedLabel=${selectedLabel}
                   onPointSelect=${(label) =>
+                    setSelectedLabel((prev) => (prev === label ? null : label))
+                  }
+                  onLegendSelect=${(label) =>
                     setSelectedLabel((prev) => (prev === label ? null : label))
                   }
                 />
