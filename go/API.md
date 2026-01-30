@@ -479,6 +479,10 @@ Get VIP statistics.
 - port (integer)
 - proto (integer)
 
+**Counters:**
+- v1: packets sent to the VIP
+- v2: bytes sent to the VIP
+
 **Response:**
 ```json
 {
@@ -499,13 +503,17 @@ Get VIP decapsulation statistics.
 - port (integer)
 - proto (integer)
 
+**Counters:**
+- v1: packets decapsulated to the VIP
+- v2: unused
+
 **Response:**
 ```json
 {
   "success": true,
   "data": {
     "v1": 100,
-    "v2": 50000
+    "v2": 0
   }
 }
 ```
@@ -516,6 +524,10 @@ Get real server statistics.
 
 **Query Parameters:**
 - index (integer)
+
+**Counters:**
+- v1: packets sent to the real
+- v2: bytes sent to the real
 
 **Response:**
 ```json
@@ -532,6 +544,10 @@ Get real server statistics.
 
 Get LRU cache statistics.
 
+**Counters:**
+- v1: total packets
+- v2: LRU hits
+
 **Response:**
 ```json
 {
@@ -546,6 +562,10 @@ Get LRU cache statistics.
 ### GET /api/v1/stats/lru/miss
 
 Get LRU miss statistics.
+
+**Counters:**
+- v1: TCP SYN misses
+- v2: non-SYN misses
 
 **Response:**
 ```json
@@ -562,13 +582,17 @@ Get LRU miss statistics.
 
 Get LRU fallback statistics.
 
+**Counters:**
+- v1: fallback LRU hits
+- v2: unused
+
 **Response:**
 ```json
 {
   "success": true,
   "data": {
     "v1": 100,
-    "v2": 50
+    "v2": 0
   }
 }
 ```
@@ -576,6 +600,10 @@ Get LRU fallback statistics.
 ### GET /api/v1/stats/lru/global
 
 Get global LRU statistics.
+
+**Counters:**
+- v1: map lookup failures
+- v2: global LRU routed
 
 **Response:**
 ```json
@@ -592,6 +620,10 @@ Get global LRU statistics.
 
 Get ICMP too big statistics.
 
+**Counters:**
+- v1: ICMPv4 count
+- v2: ICMPv6 count
+
 **Response:**
 ```json
 {
@@ -606,6 +638,10 @@ Get ICMP too big statistics.
 ### GET /api/v1/stats/ch-drop
 
 Get consistent hash drop statistics.
+
+**Counters:**
+- v1: real ID out of bounds
+- v2: real #0 (unmapped)
 
 **Response:**
 ```json
@@ -622,6 +658,10 @@ Get consistent hash drop statistics.
 
 Get source routing statistics.
 
+**Counters:**
+- v1: packets sent to local backends
+- v2: packets sent to remote destinations (LPM matched)
+
 **Response:**
 ```json
 {
@@ -637,13 +677,17 @@ Get source routing statistics.
 
 Get inline decapsulation statistics.
 
+**Counters:**
+- v1: packets decapsulated inline
+- v2: unused
+
 **Response:**
 ```json
 {
   "success": true,
   "data": {
     "v1": 1000,
-    "v2": 500
+    "v2": 0
   }
 }
 ```
@@ -651,6 +695,10 @@ Get inline decapsulation statistics.
 ### GET /api/v1/stats/decap
 
 Get decapsulation statistics.
+
+**Counters:**
+- v1: IPv4 packets decapsulated
+- v2: IPv6 packets decapsulated
 
 **Response:**
 ```json
@@ -666,6 +714,10 @@ Get decapsulation statistics.
 ### GET /api/v1/stats/quic-icmp
 
 Get QUIC ICMP statistics.
+
+**Counters:**
+- v1: QUIC ICMP messages
+- v2: QUIC ICMP messages dropped by Shiv
 
 **Response:**
 ```json
@@ -725,6 +777,10 @@ Get TCP server ID routing (TPR) statistics.
 
 Get XDP total statistics.
 
+**Counters:**
+- v1: packets
+- v2: bytes
+
 **Response:**
 ```json
 {
@@ -739,6 +795,10 @@ Get XDP total statistics.
 ### GET /api/v1/stats/xdp/tx
 
 Get XDP TX statistics.
+
+**Counters:**
+- v1: packets (XDP_TX)
+- v2: bytes (XDP_TX)
 
 **Response:**
 ```json
@@ -755,6 +815,10 @@ Get XDP TX statistics.
 
 Get XDP drop statistics.
 
+**Counters:**
+- v1: packets dropped (XDP_DROP)
+- v2: bytes dropped (XDP_DROP)
+
 **Response:**
 ```json
 {
@@ -769,6 +833,10 @@ Get XDP drop statistics.
 ### GET /api/v1/stats/xdp/pass
 
 Get XDP pass statistics.
+
+**Counters:**
+- v1: packets passed to kernel (XDP_PASS)
+- v2: bytes passed to kernel (XDP_PASS)
 
 **Response:**
 ```json

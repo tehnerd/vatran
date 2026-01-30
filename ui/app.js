@@ -347,7 +347,16 @@
     return { points, error };
   }
 
-  function ChartCanvas({ title, points, keys, diff = false, height = 120, showTitle = false }) {
+  function ChartCanvas({
+    title,
+    points,
+    keys,
+    diff = false,
+    height = 120,
+    showTitle = false,
+    selectedLabel = null,
+    onPointSelect = null,
+  }) {
     const canvasRef = useRef(null);
     const chartRef = useRef(null);
 
@@ -376,9 +385,18 @@
         });
       }
       const chart = chartRef.current;
+      const hiddenByLabel = new Map(
+        (chart.data.datasets || [])
+          .filter((dataset) => typeof dataset.hidden !== "undefined")
+          .map((dataset) => [dataset.label, dataset.hidden])
+      );
       const labels = points.map((p) => p.label);
+      const selectedKeys = selectedLabel
+        ? keys.filter((key) => key.label === selectedLabel)
+        : keys;
+      const visibleKeys = selectedLabel && selectedKeys.length === 0 ? keys : selectedKeys;
       chart.data.labels = labels;
-      chart.data.datasets = keys.map((key) => {
+      chart.data.datasets = visibleKeys.map((key) => {
         const values = points.map((p) => p[key.field] || 0);
         const data = diff
           ? values.map((value, index) => (index === 0 ? 0 : value - values[index - 1]))
@@ -390,14 +408,21 @@
           backgroundColor: key.fill,
           borderWidth: 2,
           tension: 0.3,
+          hidden: hiddenByLabel.get(key.label),
         };
       });
+      chart.options.onClick = (event, elements) => {
+        if (!onPointSelect || !elements || elements.length === 0) return;
+        const index = elements[0].datasetIndex;
+        const label = chart.data.datasets?.[index]?.label;
+        if (label) onPointSelect(label);
+      };
       chart.options.scales.y.beginAtZero = !diff;
       chart.options.plugins.title.display = showTitle && Boolean(title);
       chart.options.plugins.title.text = title || "";
       chart.update();
       return () => {};
-    }, [points, keys, title, diff, showTitle]);
+    }, [points, keys, title, diff, showTitle, selectedLabel, onPointSelect]);
 
     useEffect(() => {
       return () => {
@@ -413,6 +438,8 @@
 
   function StatChart({ title, points, keys, diff = false, inlineTitle = true }) {
     const [zoomed, setZoomed] = useState(false);
+    const [selectedLabel, setSelectedLabel] = useState(null);
+    const suppressZoomRef = useRef(false);
 
     return html`
       <div className="chart-wrap">
@@ -420,7 +447,16 @@
           <span className="zoom-icon" aria-hidden="true">+</span>
           Zoom
         </button>
-        <div className="chart-click" onClick=${() => setZoomed(true)}>
+        <div
+          className="chart-click"
+          onClick=${() => {
+            if (suppressZoomRef.current) {
+              suppressZoomRef.current = false;
+              return;
+            }
+            setZoomed(true);
+          }}
+        >
           <${ChartCanvas}
             title=${title}
             points=${points}
@@ -428,6 +464,14 @@
             diff=${diff}
             height=${120}
             showTitle=${inlineTitle && Boolean(title)}
+            selectedLabel=${selectedLabel}
+            onPointSelect=${(label) => {
+              setSelectedLabel((prev) => (prev === label ? null : label));
+              suppressZoomRef.current = true;
+              setTimeout(() => {
+                suppressZoomRef.current = false;
+              }, 0);
+            }}
           />
         </div>
         ${zoomed &&
@@ -451,6 +495,10 @@
                   diff=${diff}
                   height=${360}
                   showTitle=${false}
+                  selectedLabel=${selectedLabel}
+                  onPointSelect=${(label) =>
+                    setSelectedLabel((prev) => (prev === label ? null : label))
+                  }
                 />
               </div>
             </div>
@@ -1686,13 +1734,20 @@
       body: realIndex !== null ? { index: realIndex } : null,
     });
 
+    const labels = useMemo(() => getStatLabels("/stats/real"), []);
     const keys = useMemo(
       () => [
-        { label: "v1", field: "v1", color: "#2f4858", fill: "rgba(47,72,88,0.2)" },
-        { label: "v2", field: "v2", color: "#d97757", fill: "rgba(217,119,87,0.2)" },
+        { label: labels.v1, field: "v1", color: "#2f4858", fill: "rgba(47,72,88,0.2)" },
+        { label: labels.v2, field: "v2", color: "#d97757", fill: "rgba(217,119,87,0.2)" },
       ],
-      []
+      [labels]
     );
+    const latest = points[points.length - 1] || {};
+    const prev = points[points.length - 2] || {};
+    const v1 = Number(latest.v1 ?? 0);
+    const v2 = Number(latest.v2 ?? 0);
+    const d1 = v1 - Number(prev.v1 ?? 0);
+    const d2 = v2 - Number(prev.v2 ?? 0);
 
     return html`
       <main>
@@ -1738,7 +1793,43 @@
           ${statsError && html`<p className="error">${statsError}</p>`}
           ${realIndex === null
             ? html`<p className="muted">Select a real to start polling.</p>`
-            : html`<${StatChart} points=${points} keys=${keys} />`}
+            : html`
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Counter</th>
+                      <th>Absolute</th>
+                      <th>Delta/sec</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>${labels.v1}</td>
+                      <td>${v1}</td>
+                      <td>
+                        <span className=${`delta ${d1 < 0 ? "down" : "up"}`}>
+                          ${formatDelta(d1)}
+                        </span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>${labels.v2}</td>
+                      <td>${v2}</td>
+                      <td>
+                        <span className=${`delta ${d2 < 0 ? "down" : "up"}`}>
+                          ${formatDelta(d2)}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <${StatChart}
+                  title="Traffic (delta/sec)"
+                  points=${points}
+                  keys=${keys}
+                  diff=${true}
+                />
+              `}
         </section>
       </main>
     `;
