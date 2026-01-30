@@ -78,6 +78,93 @@
     },
   };
 
+  const TARGET_GROUPS_STORAGE_KEY = "vatran_target_groups";
+
+  function normalizeReal(raw) {
+    if (!raw || !raw.address) return null;
+    const address = String(raw.address).trim();
+    if (!address) return null;
+    const weight = Number(raw.weight);
+    const flags = Number(raw.flags ?? 0);
+    return {
+      address,
+      weight: Number.isFinite(weight) ? weight : 0,
+      flags: Number.isFinite(flags) ? flags : 0,
+    };
+  }
+
+  function normalizeTargetGroups(groups) {
+    if (!groups || typeof groups !== "object") return {};
+    const result = {};
+    Object.entries(groups).forEach(([name, list]) => {
+      const groupName = String(name).trim();
+      if (!groupName) return;
+      const reals = Array.isArray(list) ? list.map(normalizeReal).filter(Boolean) : [];
+      const unique = [];
+      const seen = new Set();
+      reals.forEach((real) => {
+        if (seen.has(real.address)) return;
+        seen.add(real.address);
+        unique.push(real);
+      });
+      result[groupName] = unique;
+    });
+    return result;
+  }
+
+  function loadStoredTargetGroups() {
+    if (typeof localStorage === "undefined") return {};
+    try {
+      const raw = localStorage.getItem(TARGET_GROUPS_STORAGE_KEY);
+      if (!raw) return {};
+      return normalizeTargetGroups(JSON.parse(raw));
+    } catch (err) {
+      return {};
+    }
+  }
+
+  function saveStoredTargetGroups(groups) {
+    if (typeof localStorage === "undefined") return;
+    try {
+      localStorage.setItem(TARGET_GROUPS_STORAGE_KEY, JSON.stringify(groups));
+    } catch (err) {
+      // ignore storage errors
+    }
+  }
+
+  function mergeTargetGroups(base, incoming) {
+    const next = { ...base };
+    Object.entries(incoming || {}).forEach(([name, list]) => {
+      if (!next[name]) {
+        next[name] = list;
+      }
+    });
+    return next;
+  }
+
+  function useTargetGroups() {
+    const [groups, setGroups] = useState(() => loadStoredTargetGroups());
+
+    useEffect(() => {
+      saveStoredTargetGroups(groups);
+    }, [groups]);
+
+    const refreshFromStorage = () => {
+      setGroups(loadStoredTargetGroups());
+    };
+
+    const importFromRunningConfig = async () => {
+      const data = await api.get("/config/export/json");
+      const imported = normalizeTargetGroups(data?.target_groups || {});
+      const next = mergeTargetGroups(loadStoredTargetGroups(), imported);
+      setGroups(next);
+      saveStoredTargetGroups(next);
+      return next;
+    };
+
+    return { groups, setGroups, refreshFromStorage, importFromRunningConfig };
+  }
+
   function vipIdFromVip(vip) {
     return `${encodeURIComponent(vip.address)}:${vip.port}:${vip.proto}`;
   }
@@ -315,6 +402,12 @@
           </${NavLink}>
           <${NavLink} to="/stats/real" className=${({ isActive }) => (isActive ? "active" : "")}>
             Per-real stats
+          </${NavLink}>
+          <${NavLink}
+            to="/target-groups"
+            className=${({ isActive }) => (isActive ? "active" : "")}
+          >
+            Target groups
           </${NavLink}>
           <${NavLink} to="/config" className=${({ isActive }) => (isActive ? "active" : "")}>
             Config export
@@ -723,6 +816,12 @@
     const [vipFlags, setVipFlags] = useState(null);
     const [flagForm, setFlagForm] = useState({ flag: 0, set: true });
     const [hashForm, setHashForm] = useState({ hash_function: 0 });
+    const { groups, setGroups, refreshFromStorage, importFromRunningConfig } = useTargetGroups();
+    const [targetGroupName, setTargetGroupName] = useState("");
+    const [targetGroupError, setTargetGroupError] = useState("");
+    const [targetGroupBusy, setTargetGroupBusy] = useState(false);
+    const [saveGroupName, setSaveGroupName] = useState("");
+    const [groupDiff, setGroupDiff] = useState({ add: 0, update: 0, remove: 0 });
 
     const loadReals = async () => {
       try {
@@ -755,6 +854,38 @@
       loadReals();
       loadFlags();
     }, [params.vipId]);
+
+    useEffect(() => {
+      if (!targetGroupName) {
+        setGroupDiff({ add: 0, update: 0, remove: 0 });
+        return;
+      }
+      const group = groups[targetGroupName] || [];
+      const currentByAddress = new Map(reals.map((real) => [real.address, real]));
+      const targetByAddress = new Map(group.map((real) => [real.address, real]));
+      let add = 0;
+      let update = 0;
+      let remove = 0;
+      group.forEach((real) => {
+        const existing = currentByAddress.get(real.address);
+        if (!existing) {
+          add += 1;
+          return;
+        }
+        if (
+          Number(existing.weight) !== Number(real.weight) ||
+          Number(existing.flags || 0) !== Number(real.flags || 0)
+        ) {
+          update += 1;
+        }
+      });
+      reals.forEach((real) => {
+        if (!targetByAddress.has(real.address)) {
+          remove += 1;
+        }
+      });
+      setGroupDiff({ add, update, remove });
+    }, [targetGroupName, reals, groups]);
 
     const updateWeight = async (real) => {
       try {
@@ -803,6 +934,88 @@
         setError(err.message || "request failed");
         addToast(err.message || "Add failed.", "error");
       }
+    };
+
+    const applyTargetGroup = async () => {
+      if (!targetGroupName || !groups[targetGroupName]) {
+        setTargetGroupError("Select a target group to apply.");
+        return;
+      }
+      setTargetGroupBusy(true);
+      setTargetGroupError("");
+      const group = groups[targetGroupName] || [];
+      const currentByAddress = new Map(reals.map((real) => [real.address, real]));
+      const targetByAddress = new Map(group.map((real) => [real.address, real]));
+      const toRemove = reals.filter((real) => !targetByAddress.has(real.address));
+      const toUpsert = group.filter((real) => {
+        const current = currentByAddress.get(real.address);
+        if (!current) return true;
+        return (
+          Number(current.weight) !== Number(real.weight) ||
+          Number(current.flags || 0) !== Number(real.flags || 0)
+        );
+      });
+
+      try {
+        if (toRemove.length > 0) {
+          await api.put("/vips/reals/batch", {
+            vip,
+            action: 1,
+            reals: toRemove.map((real) => ({
+              address: real.address,
+              weight: Number(real.weight),
+              flags: Number(real.flags || 0),
+            })),
+          });
+        }
+        if (toUpsert.length > 0) {
+          await Promise.all(
+            toUpsert.map((real) =>
+              api.post("/vips/reals", {
+                vip,
+                real: {
+                  address: real.address,
+                  weight: Number(real.weight),
+                  flags: Number(real.flags || 0),
+                },
+              })
+            )
+          );
+        }
+        await loadReals();
+        addToast(`Applied target group "${targetGroupName}".`, "success");
+      } catch (err) {
+        setTargetGroupError(err.message || "Failed to apply target group.");
+        addToast(err.message || "Target group apply failed.", "error");
+      } finally {
+        setTargetGroupBusy(false);
+      }
+    };
+
+    const saveCurrentAsGroup = (event) => {
+      event.preventDefault();
+      const name = saveGroupName.trim();
+      if (!name) {
+        setTargetGroupError("Provide a name for the new target group.");
+        return;
+      }
+      if (groups[name]) {
+        setTargetGroupError("A target group with that name already exists.");
+        return;
+      }
+      const next = {
+        ...groups,
+        [name]: reals.map((real) => ({
+          address: real.address,
+          weight: Number(real.weight),
+          flags: Number(real.flags || 0),
+        })),
+      };
+      setGroups(next);
+      setSaveGroupName("");
+      setTargetGroupName(name);
+      setTargetGroupError("");
+      addToast(`Target group "${name}" saved.`, "success");
     };
 
     const deleteVip = async () => {
@@ -991,6 +1204,80 @@
               </label>
             </div>
             <button className="btn" type="submit">Add real</button>
+          </form>
+        </section>
+        <section className="card">
+          <div className="section-header">
+            <div>
+              <h3>Target group</h3>
+              <p className="muted">Sync this VIP with a saved target group of reals.</p>
+            </div>
+            <div className="row">
+              <button className="btn ghost" type="button" onClick=${refreshFromStorage}>
+                Reload groups
+              </button>
+              <button
+                className="btn ghost"
+                type="button"
+                onClick=${async () => {
+                  try {
+                    await importFromRunningConfig();
+                    addToast("Imported target groups from running config.", "success");
+                  } catch (err) {
+                    setTargetGroupError(err.message || "Failed to import target groups.");
+                    addToast(err.message || "Import failed.", "error");
+                  }
+                }}
+              >
+                Import from running config
+              </button>
+            </div>
+          </div>
+          ${targetGroupError && html`<p className="error">${targetGroupError}</p>`}
+          <div className="form-row">
+            <label className="field">
+              <span>Target group</span>
+              <select
+                value=${targetGroupName}
+                onChange=${(e) => setTargetGroupName(e.target.value)}
+                disabled=${Object.keys(groups).length === 0}
+              >
+                <option value="">Select group</option>
+                ${Object.keys(groups).map(
+                  (name) => html`<option value=${name}>${name}</option>`
+                )}
+              </select>
+            </label>
+            <label className="field">
+              <span>Preview</span>
+              <input
+                value=${`add ${groupDiff.add} · update ${groupDiff.update} · remove ${groupDiff.remove}`}
+                readOnly
+              />
+            </label>
+          </div>
+          <div className="row">
+            <button
+              className="btn"
+              type="button"
+              onClick=${applyTargetGroup}
+              disabled=${targetGroupBusy || !targetGroupName}
+            >
+              ${targetGroupBusy ? "Applying..." : "Apply target group"}
+            </button>
+          </div>
+          <form className="form" onSubmit=${saveCurrentAsGroup}>
+            <div className="form-row">
+              <label className="field">
+                <span>Save current reals as new group</span>
+                <input
+                  value=${saveGroupName}
+                  onInput=${(e) => setSaveGroupName(e.target.value)}
+                  placeholder="edge-backends"
+                />
+              </label>
+            </div>
+            <button className="btn secondary" type="submit">Save target group</button>
           </form>
         </section>
       </main>
@@ -1390,6 +1677,257 @@
     `;
   }
 
+  function TargetGroups() {
+    const { addToast } = useToast();
+    const { groups, setGroups, refreshFromStorage, importFromRunningConfig } = useTargetGroups();
+    const [groupName, setGroupName] = useState("");
+    const [selectedGroup, setSelectedGroup] = useState("");
+    const [newReal, setNewReal] = useState({ address: "", weight: 100, flags: 0 });
+    const [error, setError] = useState("");
+    const [importing, setImporting] = useState(false);
+
+    useEffect(() => {
+      if (!selectedGroup) {
+        const names = Object.keys(groups);
+        if (names.length > 0) {
+          setSelectedGroup(names[0]);
+        }
+      } else if (!groups[selectedGroup]) {
+        const names = Object.keys(groups);
+        setSelectedGroup(names[0] || "");
+      }
+    }, [groups, selectedGroup]);
+
+    const createGroup = (event) => {
+      event.preventDefault();
+      const name = groupName.trim();
+      if (!name) {
+        setError("Provide a group name.");
+        return;
+      }
+      if (groups[name]) {
+        setError("That group already exists.");
+        return;
+      }
+      setGroups({ ...groups, [name]: [] });
+      setGroupName("");
+      setSelectedGroup(name);
+      setError("");
+      addToast(`Target group "${name}" created.`, "success");
+    };
+
+    const deleteGroup = (name) => {
+      const next = { ...groups };
+      delete next[name];
+      setGroups(next);
+      addToast(`Target group "${name}" removed.`, "success");
+    };
+
+    const addRealToGroup = (event) => {
+      event.preventDefault();
+      if (!selectedGroup) {
+        setError("Select a group to add a real.");
+        return;
+      }
+      const normalized = normalizeReal(newReal);
+      if (!normalized) {
+        setError("Provide a valid real address.");
+        return;
+      }
+      const group = groups[selectedGroup] || [];
+      const nextGroup = group.some((real) => real.address === normalized.address)
+        ? group.map((real) =>
+            real.address === normalized.address ? normalized : real
+          )
+        : group.concat(normalized);
+      setGroups({ ...groups, [selectedGroup]: nextGroup });
+      setNewReal({ address: "", weight: 100, flags: 0 });
+      setError("");
+      addToast("Real saved to target group.", "success");
+    };
+
+    const removeRealFromGroup = (address) => {
+      if (!selectedGroup) return;
+      const group = groups[selectedGroup] || [];
+      const nextGroup = group.filter((real) => real.address !== address);
+      setGroups({ ...groups, [selectedGroup]: nextGroup });
+    };
+
+    const updateGroupReal = (address, updates) => {
+      if (!selectedGroup) return;
+      const group = groups[selectedGroup] || [];
+      const nextGroup = group.map((real) =>
+        real.address === address ? { ...real, ...updates } : real
+      );
+      setGroups({ ...groups, [selectedGroup]: nextGroup });
+    };
+
+    const importGroups = async () => {
+      setImporting(true);
+      try {
+        await importFromRunningConfig();
+        addToast("Imported target groups from running config.", "success");
+        setError("");
+      } catch (err) {
+        setError(err.message || "Failed to import target groups.");
+        addToast(err.message || "Import failed.", "error");
+      } finally {
+        setImporting(false);
+      }
+    };
+
+    return html`
+      <main>
+        <section className="card">
+          <div className="section-header">
+            <div>
+              <h2>Target groups</h2>
+              <p className="muted">Define reusable sets of reals (address + weight).</p>
+            </div>
+            <div className="row">
+              <button className="btn ghost" type="button" onClick=${refreshFromStorage}>
+                Reload groups
+              </button>
+              <button className="btn ghost" type="button" onClick=${importGroups} disabled=${importing}>
+                ${importing ? "Importing..." : "Import from running config"}
+              </button>
+            </div>
+          </div>
+          ${error && html`<p className="error">${error}</p>`}
+          <form className="form" onSubmit=${createGroup}>
+            <div className="form-row">
+              <label className="field">
+                <span>New group name</span>
+                <input
+                  value=${groupName}
+                  onInput=${(e) => setGroupName(e.target.value)}
+                  placeholder="edge-backends"
+                />
+              </label>
+            </div>
+            <button className="btn" type="submit">Create group</button>
+          </form>
+        </section>
+        <section className="card">
+          <div className="section-header">
+            <div>
+              <h3>Group contents</h3>
+              <p className="muted">
+                Add or update real entries. Existing addresses are updated in-place.
+              </p>
+            </div>
+            <div className="row">
+              <label className="field">
+                <span>Selected group</span>
+                <select
+                  value=${selectedGroup}
+                  onChange=${(e) => setSelectedGroup(e.target.value)}
+                  disabled=${Object.keys(groups).length === 0}
+                >
+                  ${Object.keys(groups).map(
+                    (name) => html`<option value=${name}>${name}</option>`
+                  )}
+                </select>
+              </label>
+              ${selectedGroup &&
+              html`<button className="btn danger" type="button" onClick=${() => deleteGroup(selectedGroup)}>
+                Delete group
+              </button>`}
+            </div>
+          </div>
+          ${!selectedGroup
+            ? html`<p className="muted">No groups yet. Create one to add reals.</p>`
+            : html`
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Address</th>
+                      <th>Weight</th>
+                      <th>Flags</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${(groups[selectedGroup] || []).map(
+                      (real) => html`
+                        <tr>
+                          <td>${real.address}</td>
+                          <td>
+                            <input
+                              className="inline-input"
+                              type="number"
+                              min="0"
+                              value=${real.weight}
+                              onInput=${(e) =>
+                                updateGroupReal(real.address, {
+                                  weight: Number(e.target.value),
+                                })}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              className="inline-input"
+                              type="number"
+                              min="0"
+                              value=${real.flags || 0}
+                              onInput=${(e) =>
+                                updateGroupReal(real.address, {
+                                  flags: Number(e.target.value),
+                                })}
+                            />
+                          </td>
+                          <td>
+                            <button
+                              className="btn ghost"
+                              type="button"
+                              onClick=${() => removeRealFromGroup(real.address)}
+                            >
+                              Remove
+                            </button>
+                          </td>
+                        </tr>
+                      `
+                    )}
+                  </tbody>
+                </table>
+                <form className="form" onSubmit=${addRealToGroup}>
+                  <div className="form-row">
+                    <label className="field">
+                      <span>Real address</span>
+                      <input
+                        value=${newReal.address}
+                        onInput=${(e) => setNewReal({ ...newReal, address: e.target.value })}
+                        placeholder="10.0.0.1"
+                        required
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Weight</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value=${newReal.weight}
+                        onInput=${(e) => setNewReal({ ...newReal, weight: e.target.value })}
+                        required
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Flags</span>
+                      <input
+                        type="number"
+                        value=${newReal.flags}
+                        onInput=${(e) => setNewReal({ ...newReal, flags: e.target.value })}
+                      />
+                    </label>
+                  </div>
+                  <button className="btn secondary" type="submit">Save real</button>
+                </form>
+              `}
+        </section>
+      </main>
+    `;
+  }
+
   function App() {
     const [status, setStatus] = useState({ initialized: false, ready: false });
     const [toasts, setToasts] = useState([]);
@@ -1443,6 +1981,7 @@
               <${Route} path="/" element=${html`<${Dashboard} />`} />
               <${Route} path="/vips/:vipId" element=${html`<${VipDetail} />`} />
               <${Route} path="/vips/:vipId/stats" element=${html`<${VipStats} />`} />
+              <${Route} path="/target-groups" element=${html`<${TargetGroups} />`} />
               <${Route} path="/stats/global" element=${html`<${GlobalStats} />`} />
               <${Route} path="/stats/real" element=${html`<${RealStats} />`} />
               <${Route} path="/config" element=${html`<${ConfigExport} />`} />

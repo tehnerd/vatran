@@ -1,37 +1,37 @@
-(()=>{(()=>{let{useEffect:C,useMemo:S,useRef:T,useState:f,useContext:X}=React,{BrowserRouter:U,Routes:M,Route:k,NavLink:R,Link:F,useParams:O,useNavigate:Z}=ReactRouterDOM,s=htm.bind(React.createElement),D=React.createContext({addToast:()=>{}});function L(){return X(D)}let b={base:"/api/v1",async request(e,a={}){let n={method:a.method||"GET",headers:{"Content-Type":"application/json"}},l=`${b.base}${e}`;if(a.body!==void 0&&a.body!==null)if(n.method==="GET"){let o=new URLSearchParams;Object.entries(a.body).forEach(([p,c])=>{if(c!=null){if(Array.isArray(c)){c.forEach(g=>o.append(p,String(g)));return}if(typeof c=="object"){o.set(p,JSON.stringify(c));return}o.set(p,String(c))}});let i=o.toString();i&&(l+=`${l.includes("?")?"&":"?"}${i}`)}else n.body=JSON.stringify(a.body);let m=await fetch(l,n),$;try{$=await m.json()}catch{throw new Error("invalid JSON response")}if(!m.ok)throw new Error($?.error?.message||`HTTP ${m.status}`);if(!$.success){let o=$.error?.message||"request failed";throw new Error(o)}return $.data},get(e,a){return b.request(e,{method:"GET",body:a})},post(e,a){return b.request(e,{method:"POST",body:a})},put(e,a){return b.request(e,{method:"PUT",body:a})},del(e,a){return b.request(e,{method:"DELETE",body:a})}};function q(e){return`${encodeURIComponent(e.address)}:${e.port}:${e.proto}`}function A(e){let a=e.split(":"),n=Number(a.pop()||0),l=Number(a.pop()||0);return{address:decodeURIComponent(a.join(":")),port:l,proto:n}}function K(e,a,n=[]){let[l,m]=f(null),[$,o]=f(""),[i,p]=f(!0);return C(()=>{let c=!0,g=async()=>{try{let u=await e();c&&(m(u),o(""),p(!1))}catch(u){c&&(o(u.message||"request failed"),p(!1))}};g();let r=setInterval(g,a);return()=>{c=!1,clearInterval(r)}},n),{data:l,error:$,loading:i}}function V({path:e,body:a,intervalMs:n=1e3,limit:l=60}){let[m,$]=f([]),[o,i]=f(""),p=S(()=>JSON.stringify(a||{}),[a]);return C(()=>{if(a===null)return $([]),i(""),()=>{};let c=!0,g=async()=>{try{let u=await b.get(e,a);if(!c)return;let v=new Date().toLocaleTimeString();$(y=>y.concat({label:v,...u}).slice(-l)),i("")}catch(u){c&&i(u.message||"request failed")}};g();let r=setInterval(g,n);return()=>{c=!1,clearInterval(r)}},[e,p,n,l]),{points:m,error:o}}function H({title:e,points:a,keys:n,diff:l=!1,height:m=120,showTitle:$=!1}){let o=T(null),i=T(null);return C(()=>{if(!o.current)return;i.current||(i.current=new Chart(o.current,{type:"line",data:{labels:[],datasets:[]},options:{responsive:!0,maintainAspectRatio:!1,animation:!1,scales:{x:{grid:{display:!1}},y:{beginAtZero:!l}},plugins:{legend:{display:!0,position:"bottom"},title:{display:$&&!!e,text:e}}}}));let p=i.current,c=a.map(g=>g.label);return p.data.labels=c,p.data.datasets=n.map(g=>{let r=a.map(v=>v[g.field]||0),u=l?r.map((v,y)=>y===0?0:v-r[y-1]):r;return{label:g.label,data:u,borderColor:g.color,backgroundColor:g.fill,borderWidth:2,tension:.3}}),p.options.scales.y.beginAtZero=!l,p.options.plugins.title.display=$&&!!e,p.options.plugins.title.text=e||"",p.update(),()=>{}},[a,n,e,l,$]),C(()=>()=>{i.current&&(i.current.destroy(),i.current=null)},[]),s`<canvas ref=${o} height=${m}></canvas>`}function z({title:e,points:a,keys:n,diff:l=!1,inlineTitle:m=!0}){let[$,o]=f(!1);return s`
+(()=>{(()=>{let{useEffect:T,useMemo:B,useRef:j,useState:f,useContext:Ne}=React,{BrowserRouter:ae,Routes:te,Route:D,NavLink:P,Link:M,useParams:se,useNavigate:ye}=ReactRouterDOM,s=htm.bind(React.createElement),J=React.createContext({addToast:()=>{}});function U(){return Ne(J)}let w={base:"/api/v1",async request(e,a={}){let n={method:a.method||"GET",headers:{"Content-Type":"application/json"}},r=`${w.base}${e}`;if(a.body!==void 0&&a.body!==null)if(n.method==="GET"){let i=new URLSearchParams;Object.entries(a.body).forEach(([g,d])=>{if(d!=null){if(Array.isArray(d)){d.forEach(b=>i.append(g,String(b)));return}if(typeof d=="object"){i.set(g,JSON.stringify(d));return}i.set(g,String(d))}});let t=i.toString();t&&(r+=`${r.includes("?")?"&":"?"}${t}`)}else n.body=JSON.stringify(a.body);let p=await fetch(r,n),h;try{h=await p.json()}catch{throw new Error("invalid JSON response")}if(!p.ok)throw new Error(h?.error?.message||`HTTP ${p.status}`);if(!h.success){let i=h.error?.message||"request failed";throw new Error(i)}return h.data},get(e,a){return w.request(e,{method:"GET",body:a})},post(e,a){return w.request(e,{method:"POST",body:a})},put(e,a){return w.request(e,{method:"PUT",body:a})},del(e,a){return w.request(e,{method:"DELETE",body:a})}},re="vatran_target_groups";function oe(e){if(!e||!e.address)return null;let a=String(e.address).trim();if(!a)return null;let n=Number(e.weight),r=Number(e.flags??0);return{address:a,weight:Number.isFinite(n)?n:0,flags:Number.isFinite(r)?r:0}}function ne(e){if(!e||typeof e!="object")return{};let a={};return Object.entries(e).forEach(([n,r])=>{let p=String(n).trim();if(!p)return;let h=Array.isArray(r)?r.map(oe).filter(Boolean):[],i=[],t=new Set;h.forEach(g=>{t.has(g.address)||(t.add(g.address),i.push(g))}),a[p]=i}),a}function K(){if(typeof localStorage>"u")return{};try{let e=localStorage.getItem(re);return e?ne(JSON.parse(e)):{}}catch{return{}}}function le(e){if(!(typeof localStorage>"u"))try{localStorage.setItem(re,JSON.stringify(e))}catch{}}function we(e,a){let n={...e};return Object.entries(a||{}).forEach(([r,p])=>{n[r]||(n[r]=p)}),n}function ie(){let[e,a]=f(()=>K());return T(()=>{le(e)},[e]),{groups:e,setGroups:a,refreshFromStorage:()=>{a(K())},importFromRunningConfig:async()=>{let p=await w.get("/config/export/json"),h=ne(p?.target_groups||{}),i=we(K(),h);return a(i),le(i),i}}}function W(e){return`${encodeURIComponent(e.address)}:${e.port}:${e.proto}`}function X(e){let a=e.split(":"),n=Number(a.pop()||0),r=Number(a.pop()||0);return{address:decodeURIComponent(a.join(":")),port:r,proto:n}}function _e(e,a,n=[]){let[r,p]=f(null),[h,i]=f(""),[t,g]=f(!0);return T(()=>{let d=!0,b=async()=>{try{let u=await e();d&&(p(u),i(""),g(!1))}catch(u){d&&(i(u.message||"request failed"),g(!1))}};b();let c=setInterval(b,a);return()=>{d=!1,clearInterval(c)}},n),{data:r,error:h,loading:t}}function H({path:e,body:a,intervalMs:n=1e3,limit:r=60}){let[p,h]=f([]),[i,t]=f(""),g=B(()=>JSON.stringify(a||{}),[a]);return T(()=>{if(a===null)return h([]),t(""),()=>{};let d=!0,b=async()=>{try{let u=await w.get(e,a);if(!d)return;let $=new Date().toLocaleTimeString();h(I=>I.concat({label:$,...u}).slice(-r)),t("")}catch(u){d&&t(u.message||"request failed")}};b();let c=setInterval(b,n);return()=>{d=!1,clearInterval(c)}},[e,g,n,r]),{points:p,error:i}}function ce({title:e,points:a,keys:n,diff:r=!1,height:p=120,showTitle:h=!1}){let i=j(null),t=j(null);return T(()=>{if(!i.current)return;t.current||(t.current=new Chart(i.current,{type:"line",data:{labels:[],datasets:[]},options:{responsive:!0,maintainAspectRatio:!1,animation:!1,scales:{x:{grid:{display:!1}},y:{beginAtZero:!r}},plugins:{legend:{display:!0,position:"bottom"},title:{display:h&&!!e,text:e}}}}));let g=t.current,d=a.map(b=>b.label);return g.data.labels=d,g.data.datasets=n.map(b=>{let c=a.map($=>$[b.field]||0),u=r?c.map(($,I)=>I===0?0:$-c[I-1]):c;return{label:b.label,data:u,borderColor:b.color,backgroundColor:b.fill,borderWidth:2,tension:.3}}),g.options.scales.y.beginAtZero=!r,g.options.plugins.title.display=h&&!!e,g.options.plugins.title.text=e||"",g.update(),()=>{}},[a,n,e,r,h]),T(()=>()=>{t.current&&(t.current.destroy(),t.current=null)},[]),s`<canvas ref=${i} height=${p}></canvas>`}function Z({title:e,points:a,keys:n,diff:r=!1,inlineTitle:p=!0}){let[h,i]=f(!1);return s`
       <div className="chart-wrap">
-        <button className="chart-zoom-button" type="button" onClick=${()=>o(!0)}>
+        <button className="chart-zoom-button" type="button" onClick=${()=>i(!0)}>
           <span className="zoom-icon" aria-hidden="true">+</span>
           Zoom
         </button>
-        <div className="chart-click" onClick=${()=>o(!0)}>
-          <${H}
+        <div className="chart-click" onClick=${()=>i(!0)}>
+          <${ce}
             title=${e}
             points=${a}
             keys=${n}
-            diff=${l}
+            diff=${r}
             height=${120}
-            showTitle=${m&&!!e}
+            showTitle=${p&&!!e}
           />
         </div>
-        ${$&&s`
-          <div className="chart-overlay" onClick=${()=>o(!1)}>
-            <div className="chart-modal" onClick=${i=>i.stopPropagation()}>
+        ${h&&s`
+          <div className="chart-overlay" onClick=${()=>i(!1)}>
+            <div className="chart-modal" onClick=${t=>t.stopPropagation()}>
               <div className="row chart-modal-header">
                 <div>
                   <h3>${e||"Chart"}</h3>
-                  ${l?s`<p className="muted">Per-second delta.</p>`:""}
+                  ${r?s`<p className="muted">Per-second delta.</p>`:""}
                 </div>
-                <button className="btn ghost" onClick=${()=>o(!1)}>
+                <button className="btn ghost" onClick=${()=>i(!1)}>
                   Close
                 </button>
               </div>
               <div className="chart-zoom">
-                <${H}
+                <${ce}
                   title=${e}
                   points=${a}
                   keys=${n}
-                  diff=${l}
+                  diff=${r}
                   height=${360}
                   showTitle=${!1}
                 />
@@ -40,7 +40,7 @@
           </div>
         `}
       </div>
-    `}function G({children:e}){return e}function Y({toasts:e,onDismiss:a}){return s`
+    `}function de({children:e}){return e}function Ie({toasts:e,onDismiss:a}){return s`
       <div className="toast-stack">
         ${e.map(n=>s`
             <div className=${`toast ${n.kind}`}>
@@ -51,7 +51,7 @@
             </div>
           `)}
       </div>
-    `}function Q({status:e}){return s`
+    `}function Se({status:e}){return s`
       <header>
         <div>
           <div style=${{fontSize:20,fontWeight:700}}>Vatran</div>
@@ -61,21 +61,27 @@
           </div>
         </div>
         <nav>
-          <${R} to="/" end className=${({isActive:a})=>a?"active":""}>
+          <${P} to="/" end className=${({isActive:a})=>a?"active":""}>
             Dashboard
-          </${R}>
-          <${R} to="/stats/global" className=${({isActive:a})=>a?"active":""}>
+          </${P}>
+          <${P} to="/stats/global" className=${({isActive:a})=>a?"active":""}>
             Global stats
-          </${R}>
-          <${R} to="/stats/real" className=${({isActive:a})=>a?"active":""}>
+          </${P}>
+          <${P} to="/stats/real" className=${({isActive:a})=>a?"active":""}>
             Per-real stats
-          </${R}>
-          <${R} to="/config" className=${({isActive:a})=>a?"active":""}>
+          </${P}>
+          <${P}
+            to="/target-groups"
+            className=${({isActive:a})=>a?"active":""}
+          >
+            Target groups
+          </${P}>
+          <${P} to="/config" className=${({isActive:a})=>a?"active":""}>
             Config export
-          </${R}>
+          </${P}>
         </nav>
       </header>
-    `}function ee(){let{addToast:e}=L(),[a,n]=f({initialized:!1,ready:!1}),[l,m]=f([]),[$,o]=f(""),[i,p]=f(!1),[c,g]=f(!1),[r,u]=f({main_interface:"",balancer_prog_path:"",healthchecking_prog_path:"",default_mac:"",local_mac:"",root_map_path:"",root_map_pos:2,katran_src_v4:"",katran_src_v6:"",use_root_map:!1,max_vips:512,max_reals:4096,hash_func:0}),[v,y]=f({address:"",port:80,proto:6,flags:0}),h=async()=>{try{let t=await b.get("/lb/status"),I=await b.get("/vips");n(t||{initialized:!1,ready:!1}),m(I||[]),o("")}catch(t){o(t.message||"request failed")}};C(()=>{let t=!0;return(async()=>{t&&await h()})(),()=>{t=!1}},[]);let P=async t=>{t.preventDefault();try{let I={...r,root_map_pos:r.root_map_pos===""?void 0:Number(r.root_map_pos),max_vips:Number(r.max_vips),max_reals:Number(r.max_reals),hash_func:Number(r.hash_func)};await b.post("/lb/create",I),o(""),p(!1),e("Load balancer initialized.","success"),await h()}catch(I){o(I.message||"request failed"),e(I.message||"Initialize failed.","error")}},w=async t=>{t.preventDefault();try{await b.post("/vips",{...v,port:Number(v.port),proto:Number(v.proto),flags:Number(v.flags||0)}),y({address:"",port:80,proto:6,flags:0}),o(""),g(!1),e("VIP created.","success"),await h()}catch(I){o(I.message||"request failed"),e(I.message||"VIP create failed.","error")}},_=async()=>{try{await b.post("/lb/load-bpf-progs"),o(""),e("BPF programs loaded.","success"),await h()}catch(t){o(t.message||"request failed"),e(t.message||"Load BPF programs failed.","error")}},x=async()=>{try{await b.post("/lb/attach-bpf-progs"),o(""),e("BPF programs attached.","success"),await h()}catch(t){o(t.message||"request failed"),e(t.message||"Attach BPF programs failed.","error")}};return s`
+    `}function Ce(){let{addToast:e}=U(),[a,n]=f({initialized:!1,ready:!1}),[r,p]=f([]),[h,i]=f(""),[t,g]=f(!1),[d,b]=f(!1),[c,u]=f({main_interface:"",balancer_prog_path:"",healthchecking_prog_path:"",default_mac:"",local_mac:"",root_map_path:"",root_map_pos:2,katran_src_v4:"",katran_src_v6:"",use_root_map:!1,max_vips:512,max_reals:4096,hash_func:0}),[$,I]=f({address:"",port:80,proto:6,flags:0}),v=async()=>{try{let o=await w.get("/lb/status"),m=await w.get("/vips");n(o||{initialized:!1,ready:!1}),p(m||[]),i("")}catch(o){i(o.message||"request failed")}};T(()=>{let o=!0;return(async()=>{o&&await v()})(),()=>{o=!1}},[]);let k=async o=>{o.preventDefault();try{let m={...c,root_map_pos:c.root_map_pos===""?void 0:Number(c.root_map_pos),max_vips:Number(c.max_vips),max_reals:Number(c.max_reals),hash_func:Number(c.hash_func)};await w.post("/lb/create",m),i(""),g(!1),e("Load balancer initialized.","success"),await v()}catch(m){i(m.message||"request failed"),e(m.message||"Initialize failed.","error")}},S=async o=>{o.preventDefault();try{await w.post("/vips",{...$,port:Number($.port),proto:Number($.proto),flags:Number($.flags||0)}),I({address:"",port:80,proto:6,flags:0}),i(""),b(!1),e("VIP created.","success"),await v()}catch(m){i(m.message||"request failed"),e(m.message||"VIP create failed.","error")}},C=async()=>{try{await w.post("/lb/load-bpf-progs"),i(""),e("BPF programs loaded.","success"),await v()}catch(o){i(o.message||"request failed"),e(o.message||"Load BPF programs failed.","error")}},F=async()=>{try{await w.post("/lb/attach-bpf-progs"),i(""),e("BPF programs attached.","success"),await v()}catch(o){i(o.message||"request failed"),e(o.message||"Attach BPF programs failed.","error")}};return s`
       <main>
         <section className="card">
           <h2>Load balancer</h2>
@@ -83,12 +89,12 @@
           <p>Ready: ${a.ready?"yes":"no"}</p>
           <div className="row">
             ${!a.initialized&&s`
-              <button className="btn" onClick=${()=>p(t=>!t)}>
-                ${i?"Close":"Initialize"}
+              <button className="btn" onClick=${()=>g(o=>!o)}>
+                ${t?"Close":"Initialize"}
               </button>
             `}
-            <button className="btn secondary" onClick=${()=>g(t=>!t)}>
-              ${c?"Close":"Create VIP"}
+            <button className="btn secondary" onClick=${()=>b(o=>!o)}>
+              ${d?"Close":"Create VIP"}
             </button>
           </div>
           ${!a.ready&&s`
@@ -96,27 +102,27 @@
               <button
                 className="btn ghost"
                 disabled=${!a.initialized}
-                onClick=${_}
+                onClick=${C}
               >
                 Load BPF Programs
               </button>
               <button
                 className="btn ghost"
                 disabled=${!a.initialized}
-                onClick=${x}
+                onClick=${F}
               >
                 Attach BPF Programs
               </button>
             </div>
           `}
-          ${i&&s`
-            <form className="form" onSubmit=${P}>
+          ${t&&s`
+            <form className="form" onSubmit=${k}>
               <div className="form-row">
                 <label className="field">
                   <span>Main interface</span>
                   <input
-                    value=${r.main_interface}
-                    onInput=${t=>u({...r,main_interface:t.target.value})}
+                    value=${c.main_interface}
+                    onInput=${o=>u({...c,main_interface:o.target.value})}
                     placeholder="eth0"
                     required
                   />
@@ -124,8 +130,8 @@
                 <label className="field">
                   <span>Balancer prog path</span>
                   <input
-                    value=${r.balancer_prog_path}
-                    onInput=${t=>u({...r,balancer_prog_path:t.target.value})}
+                    value=${c.balancer_prog_path}
+                    onInput=${o=>u({...c,balancer_prog_path:o.target.value})}
                     placeholder="/path/to/bpf.o"
                     required
                   />
@@ -135,16 +141,16 @@
                 <label className="field">
                   <span>Healthchecking path</span>
                   <input
-                    value=${r.healthchecking_prog_path}
-                    onInput=${t=>u({...r,healthchecking_prog_path:t.target.value})}
+                    value=${c.healthchecking_prog_path}
+                    onInput=${o=>u({...c,healthchecking_prog_path:o.target.value})}
                     placeholder="/path/to/hc.o"
                   />
                 </label>
                 <label className="field">
                   <span>Default MAC</span>
                   <input
-                    value=${r.default_mac}
-                    onInput=${t=>u({...r,default_mac:t.target.value})}
+                    value=${c.default_mac}
+                    onInput=${o=>u({...c,default_mac:o.target.value})}
                     placeholder="aa:bb:cc:dd:ee:ff"
                     required
                   />
@@ -154,10 +160,10 @@
                 <label className="field">
                   <span>Local MAC</span>
                   <input
-                    value=${r.local_mac}
-                    onInput=${t=>u({...r,local_mac:t.target.value})}
+                    value=${c.local_mac}
+                    onInput=${o=>u({...c,local_mac:o.target.value})}
                     placeholder="11:22:33:44:55:66"
-                    required=${r.healthchecking_prog_path?.trim()!==""}
+                    required=${c.healthchecking_prog_path?.trim()!==""}
                   />
                 </label>
                 <label className="field">
@@ -165,8 +171,8 @@
                   <input
                     type="number"
                     min="0"
-                    value=${r.hash_func}
-                    onInput=${t=>u({...r,hash_func:t.target.value})}
+                    value=${c.hash_func}
+                    onInput=${o=>u({...c,hash_func:o.target.value})}
                   />
                 </label>
               </div>
@@ -174,8 +180,8 @@
                 <label className="field">
                   <span>Root map path</span>
                   <input
-                    value=${r.root_map_path}
-                    onInput=${t=>u({...r,root_map_path:t.target.value})}
+                    value=${c.root_map_path}
+                    onInput=${o=>u({...c,root_map_path:o.target.value})}
                     placeholder="/sys/fs/bpf/root_map"
                   />
                 </label>
@@ -184,8 +190,8 @@
                   <input
                     type="number"
                     min="0"
-                    value=${r.root_map_pos}
-                    onInput=${t=>u({...r,root_map_pos:t.target.value})}
+                    value=${c.root_map_pos}
+                    onInput=${o=>u({...c,root_map_pos:o.target.value})}
                   />
                 </label>
               </div>
@@ -193,16 +199,16 @@
                 <label className="field">
                   <span>Katran src v4</span>
                   <input
-                    value=${r.katran_src_v4}
-                    onInput=${t=>u({...r,katran_src_v4:t.target.value})}
+                    value=${c.katran_src_v4}
+                    onInput=${o=>u({...c,katran_src_v4:o.target.value})}
                     placeholder="10.0.0.1"
                   />
                 </label>
                 <label className="field">
                   <span>Katran src v6</span>
                   <input
-                    value=${r.katran_src_v6}
-                    onInput=${t=>u({...r,katran_src_v6:t.target.value})}
+                    value=${c.katran_src_v6}
+                    onInput=${o=>u({...c,katran_src_v6:o.target.value})}
                     placeholder="fc00::1"
                   />
                 </label>
@@ -213,8 +219,8 @@
                   <input
                     type="number"
                     min="1"
-                    value=${r.max_vips}
-                    onInput=${t=>u({...r,max_vips:t.target.value})}
+                    value=${c.max_vips}
+                    onInput=${o=>u({...c,max_vips:o.target.value})}
                   />
                 </label>
                 <label className="field">
@@ -222,30 +228,30 @@
                   <input
                     type="number"
                     min="1"
-                    value=${r.max_reals}
-                    onInput=${t=>u({...r,max_reals:t.target.value})}
+                    value=${c.max_reals}
+                    onInput=${o=>u({...c,max_reals:o.target.value})}
                   />
                 </label>
               </div>
               <label className="field checkbox">
                 <input
                   type="checkbox"
-                  checked=${r.use_root_map}
-                  onChange=${t=>u({...r,use_root_map:t.target.checked})}
+                  checked=${c.use_root_map}
+                  onChange=${o=>u({...c,use_root_map:o.target.checked})}
                 />
                 <span>Use root map</span>
               </label>
               <button className="btn" type="submit">Initialize LB</button>
             </form>
           `}
-          ${c&&s`
-            <form className="form" onSubmit=${w}>
+          ${d&&s`
+            <form className="form" onSubmit=${S}>
               <div className="form-row">
                 <label className="field">
                   <span>VIP address</span>
                   <input
-                    value=${v.address}
-                    onInput=${t=>y({...v,address:t.target.value})}
+                    value=${$.address}
+                    onInput=${o=>I({...$,address:o.target.value})}
                     placeholder="1.2.3.4"
                     required
                   />
@@ -254,16 +260,16 @@
                   <span>Port</span>
                   <input
                     type="number"
-                    value=${v.port}
-                    onInput=${t=>y({...v,port:t.target.value})}
+                    value=${$.port}
+                    onInput=${o=>I({...$,port:o.target.value})}
                     required
                   />
                 </label>
                 <label className="field">
                   <span>Protocol</span>
                   <select
-                    value=${v.proto}
-                    onChange=${t=>y({...v,proto:t.target.value})}
+                    value=${$.proto}
+                    onChange=${o=>I({...$,proto:o.target.value})}
                   >
                     <option value="6">TCP (6)</option>
                     <option value="17">UDP (17)</option>
@@ -273,41 +279,41 @@
                   <span>Flags</span>
                   <input
                     type="number"
-                    value=${v.flags}
-                    onInput=${t=>y({...v,flags:t.target.value})}
+                    value=${$.flags}
+                    onInput=${o=>I({...$,flags:o.target.value})}
                   />
                 </label>
               </div>
               <button className="btn" type="submit">Create VIP</button>
             </form>
           `}
-          ${$&&s`<p className="error">${$}</p>`}
+          ${h&&s`<p className="error">${h}</p>`}
         </section>
         <section className="card">
           <div className="section-header">
             <h2>VIPs</h2>
-            <button className="btn ghost" onClick=${h}>Refresh</button>
+            <button className="btn ghost" onClick=${v}>Refresh</button>
           </div>
-          ${l.length===0?s`<p className="muted">No VIPs configured yet.</p>`:s`
+          ${r.length===0?s`<p className="muted">No VIPs configured yet.</p>`:s`
                 <div className="grid">
-                  ${l.map(t=>s`
+                  ${r.map(o=>s`
                       <div className="card">
                         <div style=${{fontWeight:600}}>
-                          ${t.address}:${t.port} / ${t.proto}
+                          ${o.address}:${o.port} / ${o.proto}
                         </div>
                         <div className="muted" style=${{marginTop:6}}>
-                          Flags: ${t.flags||0}
+                          Flags: ${o.flags||0}
                         </div>
                         <div className="row" style=${{marginTop:12}}>
-                          <${F} className="btn" to=${`/vips/${q(t)}`}>
+                          <${M} className="btn" to=${`/vips/${W(o)}`}>
                             Open
-                          </${F}>
-                          <${F}
+                          </${M}>
+                          <${M}
                             className="btn secondary"
-                            to=${`/vips/${q(t)}/stats`}
+                            to=${`/vips/${W(o)}/stats`}
                           >
                             Stats
-                          </${F}>
+                          </${M}>
                         </div>
                       </div>
                     `)}
@@ -315,23 +321,23 @@
               `}
         </section>
       </main>
-    `}function ae(){let{addToast:e}=L(),a=O(),n=Z(),l=S(()=>A(a.vipId),[a.vipId]),[m,$]=f([]),[o,i]=f(""),[p,c]=f(""),[g,r]=f(!0),[u,v]=f({address:"",weight:100,flags:0}),[y,h]=f({}),[P,w]=f(null),[_,x]=f({flag:0,set:!0}),[t,I]=f({hash_function:0}),E=async()=>{try{let d=await b.get("/vips/reals",l);$(d||[]);let N={};(d||[]).forEach(J=>{N[J.address]=J.weight}),h(N),i(""),r(!1)}catch(d){i(d.message||"request failed"),r(!1)}},B=async()=>{try{let d=await b.get("/vips/flags",l);w(d?.flags??0),c("")}catch(d){c(d.message||"request failed")}};C(()=>{E(),B()},[a.vipId]);let ce=async d=>{try{let N=Number(y[d.address]);await b.post("/vips/reals",{vip:l,real:{address:d.address,weight:N,flags:d.flags||0}}),await E(),e("Real weight updated.","success")}catch(N){i(N.message||"request failed"),e(N.message||"Update failed.","error")}},de=async d=>{try{await b.del("/vips/reals",{vip:l,real:{address:d.address,weight:d.weight,flags:d.flags||0}}),await E(),e("Real removed.","success")}catch(N){i(N.message||"request failed"),e(N.message||"Remove failed.","error")}},ue=async d=>{d.preventDefault();try{await b.post("/vips/reals",{vip:l,real:{address:u.address,weight:Number(u.weight),flags:Number(u.flags||0)}}),v({address:"",weight:100,flags:0}),await E(),e("Real added.","success")}catch(N){i(N.message||"request failed"),e(N.message||"Add failed.","error")}},pe=async()=>{try{await b.del("/vips",l),e("VIP deleted.","success"),n("/")}catch(d){i(d.message||"request failed"),e(d.message||"Delete failed.","error")}},me=async d=>{d.preventDefault();try{await b.put("/vips/flags",{...l,flag:Number(_.flag),set:!!_.set}),await B(),e("VIP flags updated.","success")}catch(N){c(N.message||"request failed"),e(N.message||"Flag update failed.","error")}},fe=async d=>{d.preventDefault();try{await b.put("/vips/hash-function",{...l,hash_function:Number(t.hash_function)}),e("Hash function updated.","success")}catch(N){c(N.message||"request failed"),e(N.message||"Hash update failed.","error")}};return s`
+    `}function Re(){let{addToast:e}=U(),a=se(),n=ye(),r=B(()=>X(a.vipId),[a.vipId]),[p,h]=f([]),[i,t]=f(""),[g,d]=f(""),[b,c]=f(!0),[u,$]=f({address:"",weight:100,flags:0}),[I,v]=f({}),[k,S]=f(null),[C,F]=f({flag:0,set:!0}),[o,m]=f({hash_function:0}),{groups:y,setGroups:A,refreshFromStorage:V,importFromRunningConfig:x}=ie(),[G,me]=f(""),[ge,L]=f(""),[fe,he]=f(!1),[be,ve]=f(""),[Y,$e]=f({add:0,update:0,remove:0}),O=async()=>{try{let l=await w.get("/vips/reals",r);h(l||[]);let N={};(l||[]).forEach(q=>{N[q.address]=q.weight}),v(N),t(""),c(!1)}catch(l){t(l.message||"request failed"),c(!1)}},Q=async()=>{try{let l=await w.get("/vips/flags",r);S(l?.flags??0),d("")}catch(l){d(l.message||"request failed")}};T(()=>{O(),Q()},[a.vipId]),T(()=>{if(!G){$e({add:0,update:0,remove:0});return}let l=y[G]||[],N=new Map(p.map(R=>[R.address,R])),q=new Map(l.map(R=>[R.address,R])),E=0,z=0,_=0;l.forEach(R=>{let ee=N.get(R.address);if(!ee){E+=1;return}(Number(ee.weight)!==Number(R.weight)||Number(ee.flags||0)!==Number(R.flags||0))&&(z+=1)}),p.forEach(R=>{q.has(R.address)||(_+=1)}),$e({add:E,update:z,remove:_})},[G,p,y]);let qe=async l=>{try{let N=Number(I[l.address]);await w.post("/vips/reals",{vip:r,real:{address:l.address,weight:N,flags:l.flags||0}}),await O(),e("Real weight updated.","success")}catch(N){t(N.message||"request failed"),e(N.message||"Update failed.","error")}},De=async l=>{try{await w.del("/vips/reals",{vip:r,real:{address:l.address,weight:l.weight,flags:l.flags||0}}),await O(),e("Real removed.","success")}catch(N){t(N.message||"request failed"),e(N.message||"Remove failed.","error")}},Ve=async l=>{l.preventDefault();try{await w.post("/vips/reals",{vip:r,real:{address:u.address,weight:Number(u.weight),flags:Number(u.flags||0)}}),$({address:"",weight:100,flags:0}),await O(),e("Real added.","success")}catch(N){t(N.message||"request failed"),e(N.message||"Add failed.","error")}},Le=async()=>{if(!G||!y[G]){L("Select a target group to apply.");return}he(!0),L("");let l=y[G]||[],N=new Map(p.map(_=>[_.address,_])),q=new Map(l.map(_=>[_.address,_])),E=p.filter(_=>!q.has(_.address)),z=l.filter(_=>{let R=N.get(_.address);return R?Number(R.weight)!==Number(_.weight)||Number(R.flags||0)!==Number(_.flags||0):!0});try{E.length>0&&await w.put("/vips/reals/batch",{vip:r,action:1,reals:E.map(_=>({address:_.address,weight:Number(_.weight),flags:Number(_.flags||0)}))}),z.length>0&&await Promise.all(z.map(_=>w.post("/vips/reals",{vip:r,real:{address:_.address,weight:Number(_.weight),flags:Number(_.flags||0)}}))),await O(),e(`Applied target group "${G}".`,"success")}catch(_){L(_.message||"Failed to apply target group."),e(_.message||"Target group apply failed.","error")}finally{he(!1)}},Be=l=>{l.preventDefault();let N=be.trim();if(!N){L("Provide a name for the new target group.");return}if(y[N]){L("A target group with that name already exists.");return}let q={...y,[N]:p.map(E=>({address:E.address,weight:Number(E.weight),flags:Number(E.flags||0)}))};A(q),ve(""),me(N),L(""),e(`Target group "${N}" saved.`,"success")},Oe=async()=>{try{await w.del("/vips",r),e("VIP deleted.","success"),n("/")}catch(l){t(l.message||"request failed"),e(l.message||"Delete failed.","error")}},ze=async l=>{l.preventDefault();try{await w.put("/vips/flags",{...r,flag:Number(C.flag),set:!!C.set}),await Q(),e("VIP flags updated.","success")}catch(N){d(N.message||"request failed"),e(N.message||"Flag update failed.","error")}},je=async l=>{l.preventDefault();try{await w.put("/vips/hash-function",{...r,hash_function:Number(o.hash_function)}),e("Hash function updated.","success")}catch(N){d(N.message||"request failed"),e(N.message||"Hash update failed.","error")}};return s`
       <main>
         <section className="card">
           <div className="section-header">
             <div>
               <h2>VIP Detail</h2>
-              <p className="muted">${l.address}:${l.port} / ${l.proto}</p>
-              <p className="muted">Flags: ${P??"\u2014"}</p>
+              <p className="muted">${r.address}:${r.port} / ${r.proto}</p>
+              <p className="muted">Flags: ${k??"\u2014"}</p>
             </div>
             <div className="row">
-              <button className="btn ghost" onClick=${B}>Refresh flags</button>
-              <button className="btn danger" onClick=${pe}>Delete VIP</button>
+              <button className="btn ghost" onClick=${Q}>Refresh flags</button>
+              <button className="btn danger" onClick=${Oe}>Delete VIP</button>
             </div>
           </div>
-          ${o&&s`<p className="error">${o}</p>`}
-          ${p&&s`<p className="error">${p}</p>`}
-          ${g?s`<p className="muted">Loading reals…</p>`:s`
+          ${i&&s`<p className="error">${i}</p>`}
+          ${g&&s`<p className="error">${g}</p>`}
+          ${b?s`<p className="muted">Loading reals…</p>`:s`
                 <table className="table">
                   <thead>
                     <tr>
@@ -343,29 +349,29 @@
                     </tr>
                   </thead>
                   <tbody>
-                    ${m.map(d=>s`
+                    ${p.map(l=>s`
                         <tr>
                           <td>
                             <span
-                              className=${`dot ${Number(d.weight)>0?"ok":"bad"}`}
+                              className=${`dot ${Number(l.weight)>0?"ok":"bad"}`}
                             ></span>
                           </td>
-                          <td>${d.address}</td>
+                          <td>${l.address}</td>
                           <td>
                             <input
                               className="inline-input"
                               type="number"
                               min="0"
-                              value=${y[d.address]??d.weight}
-                              onInput=${N=>h({...y,[d.address]:N.target.value})}
+                              value=${I[l.address]??l.weight}
+                              onInput=${N=>v({...I,[l.address]:N.target.value})}
                             />
                           </td>
-                          <td>${d.flags||0}</td>
+                          <td>${l.flags||0}</td>
                           <td className="row">
-                            <button className="btn" onClick=${()=>ce(d)}>
+                            <button className="btn" onClick=${()=>qe(l)}>
                               Update
                             </button>
-                            <button className="btn ghost" onClick=${()=>de(d)}>
+                            <button className="btn ghost" onClick=${()=>De(l)}>
                               Remove
                             </button>
                           </td>
@@ -378,21 +384,21 @@
         <section className="card">
           <h3>VIP flags & hash</h3>
           <div className="grid">
-            <form className="form" onSubmit=${me}>
+            <form className="form" onSubmit=${ze}>
               <div className="form-row">
                 <label className="field">
                   <span>Flag</span>
                   <input
                     type="number"
-                    value=${_.flag}
-                    onInput=${d=>x({..._,flag:d.target.value})}
+                    value=${C.flag}
+                    onInput=${l=>F({...C,flag:l.target.value})}
                   />
                 </label>
                 <label className="field">
                   <span>Set</span>
                   <select
-                    value=${String(_.set)}
-                    onChange=${d=>x({..._,set:d.target.value==="true"})}
+                    value=${String(C.set)}
+                    onChange=${l=>F({...C,set:l.target.value==="true"})}
                   >
                     <option value="true">Set</option>
                     <option value="false">Clear</option>
@@ -401,15 +407,15 @@
               </div>
               <button className="btn" type="submit">Apply flag</button>
             </form>
-            <form className="form" onSubmit=${fe}>
+            <form className="form" onSubmit=${je}>
               <div className="form-row">
                 <label className="field">
                   <span>Hash function</span>
                   <input
                     type="number"
                     min="0"
-                    value=${t.hash_function}
-                    onInput=${d=>I({...t,hash_function:d.target.value})}
+                    value=${o.hash_function}
+                    onInput=${l=>m({...o,hash_function:l.target.value})}
                   />
                 </label>
               </div>
@@ -419,13 +425,13 @@
         </section>
         <section className="card">
           <h3>Add real</h3>
-          <form className="form" onSubmit=${ue}>
+          <form className="form" onSubmit=${Ve}>
             <div className="form-row">
               <label className="field">
                 <span>Real address</span>
                 <input
                   value=${u.address}
-                  onInput=${d=>v({...u,address:d.target.value})}
+                  onInput=${l=>$({...u,address:l.target.value})}
                   placeholder="10.0.0.1"
                   required
                 />
@@ -436,7 +442,7 @@
                   type="number"
                   min="0"
                   value=${u.weight}
-                  onInput=${d=>v({...u,weight:d.target.value})}
+                  onInput=${l=>$({...u,weight:l.target.value})}
                   required
                 />
               </label>
@@ -445,15 +451,79 @@
                 <input
                   type="number"
                   value=${u.flags}
-                  onInput=${d=>v({...u,flags:d.target.value})}
+                  onInput=${l=>$({...u,flags:l.target.value})}
                 />
               </label>
             </div>
             <button className="btn" type="submit">Add real</button>
           </form>
         </section>
+        <section className="card">
+          <div className="section-header">
+            <div>
+              <h3>Target group</h3>
+              <p className="muted">Sync this VIP with a saved target group of reals.</p>
+            </div>
+            <div className="row">
+              <button className="btn ghost" type="button" onClick=${V}>
+                Reload groups
+              </button>
+              <button
+                className="btn ghost"
+                type="button"
+                onClick=${async()=>{try{await x(),e("Imported target groups from running config.","success")}catch(l){L(l.message||"Failed to import target groups."),e(l.message||"Import failed.","error")}}}
+              >
+                Import from running config
+              </button>
+            </div>
+          </div>
+          ${ge&&s`<p className="error">${ge}</p>`}
+          <div className="form-row">
+            <label className="field">
+              <span>Target group</span>
+              <select
+                value=${G}
+                onChange=${l=>me(l.target.value)}
+                disabled=${Object.keys(y).length===0}
+              >
+                <option value="">Select group</option>
+                ${Object.keys(y).map(l=>s`<option value=${l}>${l}</option>`)}
+              </select>
+            </label>
+            <label className="field">
+              <span>Preview</span>
+              <input
+                value=${`add ${Y.add} \xB7 update ${Y.update} \xB7 remove ${Y.remove}`}
+                readOnly
+              />
+            </label>
+          </div>
+          <div className="row">
+            <button
+              className="btn"
+              type="button"
+              onClick=${Le}
+              disabled=${fe||!G}
+            >
+              ${fe?"Applying...":"Apply target group"}
+            </button>
+          </div>
+          <form className="form" onSubmit=${Be}>
+            <div className="form-row">
+              <label className="field">
+                <span>Save current reals as new group</span>
+                <input
+                  value=${be}
+                  onInput=${l=>ve(l.target.value)}
+                  placeholder="edge-backends"
+                />
+              </label>
+            </div>
+            <button className="btn secondary" type="submit">Save target group</button>
+          </form>
+        </section>
       </main>
-    `}function te(){let e=O(),a=S(()=>A(e.vipId),[e.vipId]),{points:n,error:l}=V({path:"/stats/vip",body:a}),m=S(()=>[{label:"v1",field:"v1",color:"#2f4858",fill:"rgba(47,72,88,0.15)"},{label:"v2",field:"v2",color:"#d97757",fill:"rgba(217,119,87,0.2)"}],[]);return s`
+    `}function Te(){let e=se(),a=B(()=>X(e.vipId),[e.vipId]),{points:n,error:r}=H({path:"/stats/vip",body:a}),p=B(()=>[{label:"v1",field:"v1",color:"#2f4858",fill:"rgba(47,72,88,0.15)"},{label:"v2",field:"v2",color:"#d97757",fill:"rgba(217,119,87,0.2)"}],[]);return s`
       <main>
         <section className="card">
           <div className="section-header">
@@ -462,54 +532,54 @@
               <p className="muted">${a.address}:${a.port} / ${a.proto}</p>
             </div>
           </div>
-          ${l&&s`<p className="error">${l}</p>`}
-          <${z} title="Traffic" points=${n} keys=${m} />
+          ${r&&s`<p className="error">${r}</p>`}
+          <${Z} title="Traffic" points=${n} keys=${p} />
         </section>
       </main>
-    `}let W=[{title:"LRU",path:"/stats/lru"},{title:"LRU Miss",path:"/stats/lru/miss"},{title:"LRU Fallback",path:"/stats/lru/fallback"},{title:"LRU Global",path:"/stats/lru/global"},{title:"XDP Total",path:"/stats/xdp/total"},{title:"XDP Pass",path:"/stats/xdp/pass"},{title:"XDP Drop",path:"/stats/xdp/drop"},{title:"XDP Tx",path:"/stats/xdp/tx"}];function j(e){return Number.isFinite(e)?`${e>0?"+":""}${e}`:"0"}function se({title:e,path:a,diff:n=!1}){let{points:l,error:m}=V({path:a}),$=S(()=>[{label:"v1",field:"v1",color:"#2f4858",fill:"rgba(47,72,88,0.2)"},{label:"v2",field:"v2",color:"#d97757",fill:"rgba(217,119,87,0.2)"}],[]);return s`
+    `}let ue=[{title:"LRU",path:"/stats/lru"},{title:"LRU Miss",path:"/stats/lru/miss"},{title:"LRU Fallback",path:"/stats/lru/fallback"},{title:"LRU Global",path:"/stats/lru/global"},{title:"XDP Total",path:"/stats/xdp/total"},{title:"XDP Pass",path:"/stats/xdp/pass"},{title:"XDP Drop",path:"/stats/xdp/drop"},{title:"XDP Tx",path:"/stats/xdp/tx"}];function pe(e){return Number.isFinite(e)?`${e>0?"+":""}${e}`:"0"}function ke({title:e,path:a,diff:n=!1}){let{points:r,error:p}=H({path:a}),h=B(()=>[{label:"v1",field:"v1",color:"#2f4858",fill:"rgba(47,72,88,0.2)"},{label:"v2",field:"v2",color:"#d97757",fill:"rgba(217,119,87,0.2)"}],[]);return s`
       <div className="card">
         <h3>${e}</h3>
-        ${m&&s`<p className="error">${m}</p>`}
-        <${z} title=${e} points=${l} keys=${$} diff=${n} inlineTitle=${!1} />
+        ${p&&s`<p className="error">${p}</p>`}
+        <${Z} title=${e} points=${r} keys=${h} diff=${n} inlineTitle=${!1} />
       </div>
-    `}function re({title:e,path:a}){let{points:n,error:l}=V({path:a}),m=n[n.length-1]||{},$=n[n.length-2]||{},o=Number(m.v1??0),i=Number(m.v2??0),p=o-Number($.v1??0),c=i-Number($.v2??0);return s`
+    `}function Pe({title:e,path:a}){let{points:n,error:r}=H({path:a}),p=n[n.length-1]||{},h=n[n.length-2]||{},i=Number(p.v1??0),t=Number(p.v2??0),g=i-Number(h.v1??0),d=t-Number(h.v2??0);return s`
       <div className="summary-card">
         <div className="summary-title">${e}</div>
-        ${l?s`<p className="error">${l}</p>`:s`
+        ${r?s`<p className="error">${r}</p>`:s`
               <div className="summary-row">
                 <div className="stat">
                   <span className="muted">v1 absolute</span>
-                  <strong>${o}</strong>
+                  <strong>${i}</strong>
                 </div>
                 <div className="stat">
                   <span className="muted">v1 delta/sec</span>
-                  <strong className=${p<0?"delta down":"delta up"}>
-                    ${j(p)}
+                  <strong className=${g<0?"delta down":"delta up"}>
+                    ${pe(g)}
                   </strong>
                 </div>
               </div>
               <div className="summary-row">
                 <div className="stat">
                   <span className="muted">v2 absolute</span>
-                  <strong>${i}</strong>
+                  <strong>${t}</strong>
                 </div>
                 <div className="stat">
                   <span className="muted">v2 delta/sec</span>
-                  <strong className=${c<0?"delta down":"delta up"}>
-                    ${j(c)}
+                  <strong className=${d<0?"delta down":"delta up"}>
+                    ${pe(d)}
                   </strong>
                 </div>
               </div>
             `}
       </div>
-    `}function le(){let{data:e,error:a}=K(()=>b.get("/stats/userspace"),1e3,[]);return s`
+    `}function xe(){let{data:e,error:a}=_e(()=>w.get("/stats/userspace"),1e3,[]);return s`
       <main>
         <section className="card">
           <h2>Global Stats</h2>
           <p className="muted">Polling every second. Charts show per-second deltas.</p>
         </section>
         <section className="grid">
-          ${W.map(n=>s`<${se} title=${n.title} path=${n.path} diff=${!0} />`)}
+          ${ue.map(n=>s`<${ke} title=${n.title} path=${n.path} diff=${!0} />`)}
         </section>
         <section className="card">
           <h3>Userspace</h3>
@@ -535,23 +605,23 @@
             </div>
           </div>
           <div className="summary-grid">
-            ${W.map(n=>s`<${re} title=${n.title} path=${n.path} />`)}
+            ${ue.map(n=>s`<${Pe} title=${n.title} path=${n.path} />`)}
           </div>
         </section>
       </main>
-    `}function ne(){let[e,a]=f([]),[n,l]=f(""),[m,$]=f([]),[o,i]=f(""),[p,c]=f(null),[g,r]=f("");C(()=>{let h=!0;return(async()=>{try{let w=await b.get("/vips");if(!h)return;a(w||[]),!n&&w&&w.length>0&&l(q(w[0]))}catch(w){h&&r(w.message||"request failed")}})(),()=>{h=!1}},[]),C(()=>{if(!n)return;let h=A(n),P=!0;return(async()=>{try{let _=await b.get("/vips/reals",h);if(!P)return;$(_||[]),_&&_.length>0?i(x=>x||_[0].address):i(""),r("")}catch(_){P&&r(_.message||"request failed")}})(),()=>{P=!1}},[n]),C(()=>{if(!o){c(null);return}let h=!0;return(async()=>{try{let w=await b.get("/reals/index",{address:o});if(!h)return;c(w?.index??null),r("")}catch(w){h&&r(w.message||"request failed")}})(),()=>{h=!1}},[o]);let{points:u,error:v}=V({path:"/stats/real",body:p!==null?{index:p}:null}),y=S(()=>[{label:"v1",field:"v1",color:"#2f4858",fill:"rgba(47,72,88,0.2)"},{label:"v2",field:"v2",color:"#d97757",fill:"rgba(217,119,87,0.2)"}],[]);return s`
+    `}function Fe(){let[e,a]=f([]),[n,r]=f(""),[p,h]=f([]),[i,t]=f(""),[g,d]=f(null),[b,c]=f("");T(()=>{let v=!0;return(async()=>{try{let S=await w.get("/vips");if(!v)return;a(S||[]),!n&&S&&S.length>0&&r(W(S[0]))}catch(S){v&&c(S.message||"request failed")}})(),()=>{v=!1}},[]),T(()=>{if(!n)return;let v=X(n),k=!0;return(async()=>{try{let C=await w.get("/vips/reals",v);if(!k)return;h(C||[]),C&&C.length>0?t(F=>F||C[0].address):t(""),c("")}catch(C){k&&c(C.message||"request failed")}})(),()=>{k=!1}},[n]),T(()=>{if(!i){d(null);return}let v=!0;return(async()=>{try{let S=await w.get("/reals/index",{address:i});if(!v)return;d(S?.index??null),c("")}catch(S){v&&c(S.message||"request failed")}})(),()=>{v=!1}},[i]);let{points:u,error:$}=H({path:"/stats/real",body:g!==null?{index:g}:null}),I=B(()=>[{label:"v1",field:"v1",color:"#2f4858",fill:"rgba(47,72,88,0.2)"},{label:"v2",field:"v2",color:"#d97757",fill:"rgba(217,119,87,0.2)"}],[]);return s`
       <main>
         <section className="card">
           <h2>Per-Real Stats</h2>
           <p className="muted">Select a VIP and real address to chart.</p>
-          ${g&&s`<p className="error">${g}</p>`}
+          ${b&&s`<p className="error">${b}</p>`}
           <div className="form-row">
             <label className="field">
               <span>VIP</span>
-              <select value=${n} onChange=${h=>l(h.target.value)}>
-                ${e.map(h=>s`
-                    <option value=${q(h)}>
-                      ${h.address}:${h.port} / ${h.proto}
+              <select value=${n} onChange=${v=>r(v.target.value)}>
+                ${e.map(v=>s`
+                    <option value=${W(v)}>
+                      ${v.address}:${v.port} / ${v.proto}
                     </option>
                   `)}
               </select>
@@ -559,28 +629,28 @@
             <label className="field">
               <span>Real</span>
               <select
-                value=${o}
-                onChange=${h=>i(h.target.value)}
-                disabled=${m.length===0}
+                value=${i}
+                onChange=${v=>t(v.target.value)}
+                disabled=${p.length===0}
               >
-                ${m.map(h=>s`
-                    <option value=${h.address}>${h.address}</option>
+                ${p.map(v=>s`
+                    <option value=${v.address}>${v.address}</option>
                   `)}
               </select>
             </label>
             <label className="field">
               <span>Index</span>
-              <input value=${p??""} readOnly />
+              <input value=${g??""} readOnly />
             </label>
           </div>
         </section>
         <section className="card">
           <h3>Real stats</h3>
-          ${v&&s`<p className="error">${v}</p>`}
-          ${p===null?s`<p className="muted">Select a real to start polling.</p>`:s`<${z} points=${u} keys=${y} />`}
+          ${$&&s`<p className="error">${$}</p>`}
+          ${g===null?s`<p className="muted">Select a real to start polling.</p>`:s`<${Z} points=${u} keys=${I} />`}
         </section>
       </main>
-    `}function oe(){let{addToast:e}=L(),[a,n]=f(""),[l,m]=f(""),[$,o]=f(!0),[i,p]=f(""),c=T(!0),g=async()=>{if(c.current){o(!0),m("");try{let u=await fetch(`${b.base}/config/export`,{headers:{Accept:"application/x-yaml"}});if(!u.ok){let y=`HTTP ${u.status}`;try{y=(await u.json())?.error?.message||y}catch{}throw new Error(y)}let v=await u.text();if(!c.current)return;n(v||""),p(new Date().toLocaleString())}catch(u){c.current&&m(u.message||"request failed")}finally{c.current&&o(!1)}}},r=async()=>{if(a)try{await navigator.clipboard.writeText(a),e("Config copied to clipboard","info")}catch{e("Failed to copy config","error")}};return C(()=>(c.current=!0,g(),()=>{c.current=!1}),[]),s`
+    `}function Ge(){let{addToast:e}=U(),[a,n]=f(""),[r,p]=f(""),[h,i]=f(!0),[t,g]=f(""),d=j(!0),b=async()=>{if(d.current){i(!0),p("");try{let u=await fetch(`${w.base}/config/export`,{headers:{Accept:"application/x-yaml"}});if(!u.ok){let I=`HTTP ${u.status}`;try{I=(await u.json())?.error?.message||I}catch{}throw new Error(I)}let $=await u.text();if(!d.current)return;n($||""),g(new Date().toLocaleString())}catch(u){d.current&&p(u.message||"request failed")}finally{d.current&&i(!1)}}},c=async()=>{if(a)try{await navigator.clipboard.writeText(a),e("Config copied to clipboard","info")}catch{e("Failed to copy config","error")}};return T(()=>(d.current=!0,b(),()=>{d.current=!1}),[]),s`
       <main>
         <section className="card">
           <div className="section-header">
@@ -589,34 +659,171 @@
               <p className="muted">Exported from /api/v1/config/export</p>
             </div>
             <div className="row">
-              <button className="btn ghost" onClick=${r} disabled=${!a}>
+              <button className="btn ghost" onClick=${c} disabled=${!a}>
                 Copy YAML
               </button>
-              <button className="btn" onClick=${g} disabled=${$}>
+              <button className="btn" onClick=${b} disabled=${h}>
                 Refresh
               </button>
             </div>
           </div>
-          ${l&&s`<p className="error">${l}</p>`}
-          ${$?s`<p className="muted">Loading config...</p>`:a?s`<pre className="yaml-view">${a}</pre>`:s`<p className="muted">No config data returned.</p>`}
-          ${i&&s`<p className="muted">Last fetched ${i}</p>`}
+          ${r&&s`<p className="error">${r}</p>`}
+          ${h?s`<p className="muted">Loading config...</p>`:a?s`<pre className="yaml-view">${a}</pre>`:s`<p className="muted">No config data returned.</p>`}
+          ${t&&s`<p className="muted">Last fetched ${t}</p>`}
         </section>
       </main>
-    `}function ie(){let[e,a]=f({initialized:!1,ready:!1}),[n,l]=f([]),m=T({}),$=(i,p="info")=>{let c=`${Date.now()}-${Math.random().toString(16).slice(2)}`;l(g=>g.concat({id:c,message:i,kind:p})),m.current[c]=setTimeout(()=>{l(g=>g.filter(r=>r.id!==c)),delete m.current[c]},4e3)},o=i=>{m.current[i]&&(clearTimeout(m.current[i]),delete m.current[i]),l(p=>p.filter(c=>c.id!==i))};return C(()=>{let i=!0,p=async()=>{try{let g=await b.get("/lb/status");i&&a(g||{initialized:!1,ready:!1})}catch{i&&a({initialized:!1,ready:!1})}};p();let c=setInterval(p,5e3);return()=>{i=!1,clearInterval(c)}},[]),s`
-      <${U}>
-        <${G}>
-          <${D.Provider} value=${{addToast:$}}>
-            <${Q} status=${e} />
-            <${M}>
-              <${k} path="/" element=${s`<${ee} />`} />
-              <${k} path="/vips/:vipId" element=${s`<${ae} />`} />
-              <${k} path="/vips/:vipId/stats" element=${s`<${te} />`} />
-              <${k} path="/stats/global" element=${s`<${le} />`} />
-              <${k} path="/stats/real" element=${s`<${ne} />`} />
-              <${k} path="/config" element=${s`<${oe} />`} />
-            </${M}>
-            <${Y} toasts=${n} onDismiss=${o} />
-          </${D.Provider}>
-        </${G}>
-      </${U}>
-    `}ReactDOM.createRoot(document.getElementById("root")).render(s`<${ie} />`)})();})();
+    `}function Ee(){let{addToast:e}=U(),{groups:a,setGroups:n,refreshFromStorage:r,importFromRunningConfig:p}=ie(),[h,i]=f(""),[t,g]=f(""),[d,b]=f({address:"",weight:100,flags:0}),[c,u]=f(""),[$,I]=f(!1);T(()=>{if(t){if(!a[t]){let m=Object.keys(a);g(m[0]||"")}}else{let m=Object.keys(a);m.length>0&&g(m[0])}},[a,t]);let v=m=>{m.preventDefault();let y=h.trim();if(!y){u("Provide a group name.");return}if(a[y]){u("That group already exists.");return}n({...a,[y]:[]}),i(""),g(y),u(""),e(`Target group "${y}" created.`,"success")},k=m=>{let y={...a};delete y[m],n(y),e(`Target group "${m}" removed.`,"success")},S=m=>{if(m.preventDefault(),!t){u("Select a group to add a real.");return}let y=oe(d);if(!y){u("Provide a valid real address.");return}let A=a[t]||[],V=A.some(x=>x.address===y.address)?A.map(x=>x.address===y.address?y:x):A.concat(y);n({...a,[t]:V}),b({address:"",weight:100,flags:0}),u(""),e("Real saved to target group.","success")},C=m=>{if(!t)return;let A=(a[t]||[]).filter(V=>V.address!==m);n({...a,[t]:A})},F=(m,y)=>{if(!t)return;let V=(a[t]||[]).map(x=>x.address===m?{...x,...y}:x);n({...a,[t]:V})};return s`
+      <main>
+        <section className="card">
+          <div className="section-header">
+            <div>
+              <h2>Target groups</h2>
+              <p className="muted">Define reusable sets of reals (address + weight).</p>
+            </div>
+            <div className="row">
+              <button className="btn ghost" type="button" onClick=${r}>
+                Reload groups
+              </button>
+              <button className="btn ghost" type="button" onClick=${async()=>{I(!0);try{await p(),e("Imported target groups from running config.","success"),u("")}catch(m){u(m.message||"Failed to import target groups."),e(m.message||"Import failed.","error")}finally{I(!1)}}} disabled=${$}>
+                ${$?"Importing...":"Import from running config"}
+              </button>
+            </div>
+          </div>
+          ${c&&s`<p className="error">${c}</p>`}
+          <form className="form" onSubmit=${v}>
+            <div className="form-row">
+              <label className="field">
+                <span>New group name</span>
+                <input
+                  value=${h}
+                  onInput=${m=>i(m.target.value)}
+                  placeholder="edge-backends"
+                />
+              </label>
+            </div>
+            <button className="btn" type="submit">Create group</button>
+          </form>
+        </section>
+        <section className="card">
+          <div className="section-header">
+            <div>
+              <h3>Group contents</h3>
+              <p className="muted">
+                Add or update real entries. Existing addresses are updated in-place.
+              </p>
+            </div>
+            <div className="row">
+              <label className="field">
+                <span>Selected group</span>
+                <select
+                  value=${t}
+                  onChange=${m=>g(m.target.value)}
+                  disabled=${Object.keys(a).length===0}
+                >
+                  ${Object.keys(a).map(m=>s`<option value=${m}>${m}</option>`)}
+                </select>
+              </label>
+              ${t&&s`<button className="btn danger" type="button" onClick=${()=>k(t)}>
+                Delete group
+              </button>`}
+            </div>
+          </div>
+          ${t?s`
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Address</th>
+                      <th>Weight</th>
+                      <th>Flags</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${(a[t]||[]).map(m=>s`
+                        <tr>
+                          <td>${m.address}</td>
+                          <td>
+                            <input
+                              className="inline-input"
+                              type="number"
+                              min="0"
+                              value=${m.weight}
+                              onInput=${y=>F(m.address,{weight:Number(y.target.value)})}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              className="inline-input"
+                              type="number"
+                              min="0"
+                              value=${m.flags||0}
+                              onInput=${y=>F(m.address,{flags:Number(y.target.value)})}
+                            />
+                          </td>
+                          <td>
+                            <button
+                              className="btn ghost"
+                              type="button"
+                              onClick=${()=>C(m.address)}
+                            >
+                              Remove
+                            </button>
+                          </td>
+                        </tr>
+                      `)}
+                  </tbody>
+                </table>
+                <form className="form" onSubmit=${S}>
+                  <div className="form-row">
+                    <label className="field">
+                      <span>Real address</span>
+                      <input
+                        value=${d.address}
+                        onInput=${m=>b({...d,address:m.target.value})}
+                        placeholder="10.0.0.1"
+                        required
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Weight</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value=${d.weight}
+                        onInput=${m=>b({...d,weight:m.target.value})}
+                        required
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Flags</span>
+                      <input
+                        type="number"
+                        value=${d.flags}
+                        onInput=${m=>b({...d,flags:m.target.value})}
+                      />
+                    </label>
+                  </div>
+                  <button className="btn secondary" type="submit">Save real</button>
+                </form>
+              `:s`<p className="muted">No groups yet. Create one to add reals.</p>`}
+        </section>
+      </main>
+    `}function Ae(){let[e,a]=f({initialized:!1,ready:!1}),[n,r]=f([]),p=j({}),h=(t,g="info")=>{let d=`${Date.now()}-${Math.random().toString(16).slice(2)}`;r(b=>b.concat({id:d,message:t,kind:g})),p.current[d]=setTimeout(()=>{r(b=>b.filter(c=>c.id!==d)),delete p.current[d]},4e3)},i=t=>{p.current[t]&&(clearTimeout(p.current[t]),delete p.current[t]),r(g=>g.filter(d=>d.id!==t))};return T(()=>{let t=!0,g=async()=>{try{let b=await w.get("/lb/status");t&&a(b||{initialized:!1,ready:!1})}catch{t&&a({initialized:!1,ready:!1})}};g();let d=setInterval(g,5e3);return()=>{t=!1,clearInterval(d)}},[]),s`
+      <${ae}>
+        <${de}>
+          <${J.Provider} value=${{addToast:h}}>
+            <${Se} status=${e} />
+            <${te}>
+              <${D} path="/" element=${s`<${Ce} />`} />
+              <${D} path="/vips/:vipId" element=${s`<${Re} />`} />
+              <${D} path="/vips/:vipId/stats" element=${s`<${Te} />`} />
+              <${D} path="/target-groups" element=${s`<${Ee} />`} />
+              <${D} path="/stats/global" element=${s`<${xe} />`} />
+              <${D} path="/stats/real" element=${s`<${Fe} />`} />
+              <${D} path="/config" element=${s`<${Ge} />`} />
+            </${te}>
+            <${Ie} toasts=${n} onDismiss=${i} />
+          </${J.Provider}>
+        </${de}>
+      </${ae}>
+    `}ReactDOM.createRoot(document.getElementById("root")).render(s`<${Ae} />`)})();})();

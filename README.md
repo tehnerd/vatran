@@ -10,7 +10,7 @@ If you want to create a PR etc - dont. Since i could vibecode it as well. It is 
 w/ detailed feature you are missing/want to see implemented here.
 
 TODOs (in no particular order):
-1. Move work w/ UI (e.g. to define reals 
+1. More work w/ UI (e.g. to define reals via target groups) <- in progress
 2. Add some fancy pictures of UI in Docs 
 3. More examples on how it could be started
 4. Proper auth workflow (https + login + oauth2 for cli clients etc)
