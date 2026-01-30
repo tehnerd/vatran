@@ -13,8 +13,106 @@
   const html = htm.bind(React.createElement);
   const ToastContext = React.createContext({ addToast: () => {} });
 
+  const VIP_FLAG_OPTIONS = [
+    { label: "NO_SPORT", value: 1 },
+    { label: "NO_LRU", value: 2 },
+    { label: "QUIC_VIP", value: 4 },
+    { label: "DPORT_HASH", value: 8 },
+    { label: "SRC_ROUTING", value: 16 },
+    { label: "LOCAL_VIP", value: 32 },
+    { label: "GLOBAL_LRU", value: 64 },
+    { label: "HASH_SRC_DST_PORT", value: 128 },
+    { label: "UDP_STABLE_ROUTING_VIP", value: 256 },
+    { label: "UDP_FLOW_MIGRATION", value: 512 },
+  ];
+
   function useToast() {
     return useContext(ToastContext);
+  }
+
+  function sanitizeFlagId(value) {
+    return String(value).replace(/[^a-z0-9_-]/gi, "_");
+  }
+
+  function toggleFlag(mask, flagValue, enabled) {
+    const current = Number(mask) || 0;
+    const flag = Number(flagValue) || 0;
+    if (enabled) {
+      return current | flag;
+    }
+    return current & ~flag;
+  }
+
+  function getEnabledFlags(mask, options) {
+    const value = Number(mask) || 0;
+    return options.filter((opt) => (value & opt.value) !== 0);
+  }
+
+  function FlagTable({ mask, options, showStatus = false, emptyLabel = "None" }) {
+    const value = Number(mask) || 0;
+    const rows = showStatus ? options : getEnabledFlags(value, options);
+    const colSpan = showStatus ? 2 : 1;
+    return html`
+      <table className="table flag-table">
+        <thead>
+          <tr>
+            <th>Flag</th>
+            ${showStatus ? html`<th>Enabled</th>` : null}
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.length === 0
+            ? html`<tr><td colspan=${colSpan} className="muted">${emptyLabel}</td></tr>`
+            : rows.map((opt) => {
+                const enabled = (value & opt.value) !== 0;
+                return html`
+                  <tr>
+                    <td>${opt.label}</td>
+                    ${showStatus ? html`<td>${enabled ? "Yes" : "No"}</td>` : null}
+                  </tr>
+                `;
+              })}
+        </tbody>
+      </table>
+    `;
+  }
+
+  function FlagSelector({ options, value, onChange, name }) {
+    const current = Number(value) || 0;
+    const prefix = sanitizeFlagId(name || "flags");
+    return html`
+      <div className="flag-selector">
+        <table className="table flag-table">
+          <thead>
+            <tr>
+              <th>Enabled</th>
+              <th>Flag</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${options.map((opt) => {
+              const id = `${prefix}-${opt.value}`;
+              const checked = (current & opt.value) === opt.value;
+              return html`
+                <tr>
+                  <td>
+                    <input
+                      id=${id}
+                      type="checkbox"
+                      checked=${checked}
+                      onChange=${(e) => onChange(toggleFlag(current, opt.value, e.target.checked))}
+                    />
+                  </td>
+                  <td>
+                    <label className="flag-option" htmlFor=${id}>${opt.label}</label>
+                  </td>
+                </tr>
+              `;
+            })}
+          </tbody>
+        </table>
+      </div>
+    `;
   }
 
   const api = {
@@ -450,8 +548,22 @@
       try {
         const lbStatus = await api.get("/lb/status");
         const list = await api.get("/vips");
+        const vipsWithFlags = await Promise.all(
+          (list || []).map(async (vip) => {
+            try {
+              const data = await api.get("/vips/flags", {
+                address: vip.address,
+                port: vip.port,
+                proto: vip.proto,
+              });
+              return { ...vip, flags: data?.flags ?? 0 };
+            } catch (err) {
+              return { ...vip, flags: null };
+            }
+          })
+        );
         setStatus(lbStatus || { initialized: false, ready: false });
-        setVips(list || []);
+        setVips(vipsWithFlags);
         setError("");
       } catch (err) {
         setError(err.message || "request failed");
@@ -751,10 +863,11 @@
                 </label>
                 <label className="field">
                   <span>Flags</span>
-                  <input
-                    type="number"
+                  <${FlagSelector}
+                    options=${VIP_FLAG_OPTIONS}
                     value=${vipForm.flags}
-                    onInput=${(e) => setVipForm({ ...vipForm, flags: e.target.value })}
+                    name="vip-add"
+                    onChange=${(next) => setVipForm({ ...vipForm, flags: next })}
                   />
                 </label>
               </div>
@@ -779,7 +892,12 @@
                           ${vip.address}:${vip.port} / ${vip.proto}
                         </div>
                         <div className="muted" style=${{ marginTop: 6 }}>
-                          Flags: ${vip.flags || 0}
+                          <div style=${{ fontWeight: 600, marginBottom: 6 }}>Flags</div>
+                          <${FlagTable}
+                            mask=${vip.flags}
+                            options=${VIP_FLAG_OPTIONS}
+                            emptyLabel=${vip.flags === null ? "Unknown" : "No flags"}
+                          />
                         </div>
                         <div className="row" style=${{ marginTop: 12 }}>
                           <${Link} className="btn" to=${`/vips/${vipIdFromVip(vip)}`}>
@@ -814,7 +932,7 @@
     const [newReal, setNewReal] = useState({ address: "", weight: 100, flags: 0 });
     const [weights, setWeights] = useState({});
     const [vipFlags, setVipFlags] = useState(null);
-    const [flagForm, setFlagForm] = useState({ flag: 0, set: true });
+    const [flagForm, setFlagForm] = useState({ flags: 0, set: true });
     const [hashForm, setHashForm] = useState({ hash_function: 0 });
     const { groups, setGroups, refreshFromStorage, importFromRunningConfig } = useTargetGroups();
     const [targetGroupName, setTargetGroupName] = useState("");
@@ -1034,7 +1152,7 @@
       try {
         await api.put("/vips/flags", {
           ...vip,
-          flag: Number(flagForm.flag),
+          flag: Number(flagForm.flags || 0),
           set: Boolean(flagForm.set),
         });
         await loadFlags();
@@ -1066,7 +1184,18 @@
             <div>
               <h2>VIP Detail</h2>
               <p className="muted">${vip.address}:${vip.port} / ${vip.proto}</p>
-              <p className="muted">Flags: ${vipFlags ?? "—"}</p>
+              ${vipFlags === null
+                ? html`<p className="muted">Flags: —</p>`
+                : html`
+                    <div style=${{ marginTop: 8 }}>
+                      <${FlagTable}
+                        mask=${vipFlags}
+                        options=${VIP_FLAG_OPTIONS}
+                        showStatus=${true}
+                        emptyLabel="No flags"
+                      />
+                    </div>
+                  `}
             </div>
             <div className="row">
               <button className="btn ghost" onClick=${loadFlags}>Refresh flags</button>
@@ -1084,7 +1213,6 @@
                       <th>Status</th>
                       <th>Address</th>
                       <th>Weight</th>
-                      <th>Flags</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -1111,7 +1239,6 @@
                                 })}
                             />
                           </td>
-                          <td>${real.flags || 0}</td>
                           <td className="row">
                             <button className="btn" onClick=${() => updateWeight(real)}>
                               Update
@@ -1133,11 +1260,12 @@
             <form className="form" onSubmit=${submitFlagChange}>
               <div className="form-row">
                 <label className="field">
-                  <span>Flag</span>
-                  <input
-                    type="number"
-                    value=${flagForm.flag}
-                    onInput=${(e) => setFlagForm({ ...flagForm, flag: e.target.value })}
+                  <span>Flags</span>
+                  <${FlagSelector}
+                    options=${VIP_FLAG_OPTIONS}
+                    value=${flagForm.flags}
+                    name="vip-flag-change"
+                    onChange=${(next) => setFlagForm({ ...flagForm, flags: next })}
                   />
                 </label>
                 <label className="field">
@@ -1192,14 +1320,6 @@
                   value=${newReal.weight}
                   onInput=${(e) => setNewReal({ ...newReal, weight: e.target.value })}
                   required
-                />
-              </label>
-              <label className="field">
-                <span>Flags</span>
-                <input
-                  type="number"
-                  value=${newReal.flags}
-                  onInput=${(e) => setNewReal({ ...newReal, flags: e.target.value })}
                 />
               </label>
             </div>
@@ -1843,7 +1963,6 @@
                     <tr>
                       <th>Address</th>
                       <th>Weight</th>
-                      <th>Flags</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -1861,18 +1980,6 @@
                               onInput=${(e) =>
                                 updateGroupReal(real.address, {
                                   weight: Number(e.target.value),
-                                })}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              className="inline-input"
-                              type="number"
-                              min="0"
-                              value=${real.flags || 0}
-                              onInput=${(e) =>
-                                updateGroupReal(real.address, {
-                                  flags: Number(e.target.value),
                                 })}
                             />
                           </td>
@@ -1909,14 +2016,6 @@
                         value=${newReal.weight}
                         onInput=${(e) => setNewReal({ ...newReal, weight: e.target.value })}
                         required
-                      />
-                    </label>
-                    <label className="field">
-                      <span>Flags</span>
-                      <input
-                        type="number"
-                        value=${newReal.flags}
-                        onInput=${(e) => setNewReal({ ...newReal, flags: e.target.value })}
                       />
                     </label>
                   </div>

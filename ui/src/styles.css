@@ -245,6 +245,12 @@ main {
   border-bottom: 1px solid #eee5d7;
 }
 
+.flag-table th,
+.flag-table td {
+  padding: 6px 6px;
+  font-size: 13px;
+}
+
 .row {
   display: flex;
   align-items: center;
