@@ -1408,6 +1408,12 @@
     const params = useParams();
     const vip = useMemo(() => parseVipId(params.vipId), [params.vipId]);
     const { points, error } = useStatSeries({ path: "/stats/vip", body: vip });
+    const latest = points[points.length - 1] || {};
+    const prev = points[points.length - 2] || {};
+    const v1 = Number(latest.v1 ?? 0);
+    const v2 = Number(latest.v2 ?? 0);
+    const d1 = v1 - Number(prev.v1 ?? 0);
+    const d2 = v2 - Number(prev.v2 ?? 0);
     const keys = useMemo(
       () => [
         { label: "v1", field: "v1", color: "#2f4858", fill: "rgba(47,72,88,0.15)" },
@@ -1426,7 +1432,36 @@
             </div>
           </div>
           ${error && html`<p className="error">${error}</p>`}
-          <${StatChart} title="Traffic" points=${points} keys=${keys} />
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Counter</th>
+                <th>Absolute</th>
+                <th>Delta/sec</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>v1</td>
+                <td>${v1}</td>
+                <td>
+                  <span className=${`delta ${d1 < 0 ? "down" : "up"}`}>
+                    ${formatDelta(d1)}
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td>v2</td>
+                <td>${v2}</td>
+                <td>
+                  <span className=${`delta ${d2 < 0 ? "down" : "up"}`}>
+                    ${formatDelta(d2)}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <${StatChart} title="Traffic (delta/sec)" points=${points} keys=${keys} diff=${true} />
         </section>
       </main>
     `;
