@@ -22,4 +22,4 @@ COPY _build_go/healthchecking.bpf.o /healthchecking.bpf.o
 COPY go/cmd/katran-server/katran-server /katran-server
 COPY ui/dist /ui/
 
-ENTRYPOINT ["/katran-server", "-static-dir", "/ui/", "-config", "/config.yaml"]
+ENTRYPOINT ["/katran-server", "-static-dir", "/ui/", "-bpf-prog-dir", "/", "-config", "/config.yaml"]

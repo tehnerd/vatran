@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/tehnerd/vatran/go/server"
@@ -30,8 +31,16 @@ func main() {
 
 	// If config file is provided, use it
 	if *configFile != "" {
-		runWithConfigFile(*configFile)
-		return
+		if _, err := os.Stat(*configFile); err != nil {
+			if os.IsNotExist(err) {
+				log.Printf("config file do not exists")
+			} else {
+				log.Fatalf("Failed to stat config file: %v", err)
+			}
+		} else {
+			runWithConfigFile(*configFile)
+			return
+		}
 	}
 
 	// Build configuration from flags

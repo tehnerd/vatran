@@ -14,7 +14,7 @@ TODOs (in no particular order):
 2. Add some fancy pictures of UI in Docs 
 3. More examples on how it could be started
 4. Proper auth workflow (https + login + oauth2 for cli clients etc)
-5. Docker image for ease of use
+5. Docker image for ease of use <- Done
 
 ## Abstract
 
