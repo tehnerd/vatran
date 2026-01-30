@@ -89,7 +89,7 @@ Global Flags:
 Commands:
   vip     Manage VIPs (list, add, remove, show)
   real    Manage real servers (add, remove, update)
-  stats   View statistics (vip, lru, xdp, decap, etc.)
+  stats   View statistics (vip, real, lru, xdp, decap, etc.)
   mac     Manage default router MAC address (show, set)
   hc      Manage healthcheck destinations (list, add, remove)
   config  Export configuration (export)
@@ -101,6 +101,7 @@ Examples:
   katran-cli vip show 10.0.0.1 80 tcp
   katran-cli real add 10.0.0.1 80 tcp 192.168.1.1 100
   katran-cli stats vip 10.0.0.1 80 tcp --watch
+  katran-cli stats real 192.168.1.1 --watch
   katran-cli mac show
   katran-cli hc list
   katran-cli config export
@@ -397,7 +398,7 @@ func realUpdate(c *client.Client, args []string) error {
 // handleStats handles statistics commands.
 func handleStats(c *client.Client, args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("usage: stats <vip|lru|xdp|decap|ch-drop|icmp-too-big|src-routing|all> [args]")
+		return fmt.Errorf("usage: stats <vip|real|lru|xdp|decap|ch-drop|icmp-too-big|src-routing|all> [args]")
 	}
 
 	fs := flag.NewFlagSet("stats", flag.ExitOnError)
@@ -428,6 +429,8 @@ func statsOnce(c *client.Client, cmd string, args []string) error {
 	switch cmd {
 	case "vip":
 		return statsVIP(c, args)
+	case "real":
+		return statsReal(c, args)
 	case "lru":
 		return statsLRU(c)
 	case "xdp":
@@ -473,6 +476,27 @@ func statsVIP(c *client.Client, args []string) error {
 	return nil
 }
 
+func statsReal(c *client.Client, args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("usage: stats real <address>")
+	}
+
+	index, err := c.GetRealIndex(args[0])
+	if err != nil {
+		return fmt.Errorf("failed to get real index: %w", err)
+	}
+
+	stats, err := c.GetRealStats(index)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Real Stats for %s (index=%d):\n", args[0], index)
+	fmt.Printf("  Packets: %d\n", stats.V1)
+	fmt.Printf("  Bytes:   %d\n", stats.V2)
+	return nil
+}
+
 func statsLRU(c *client.Client) error {
 	stats, err := c.GetLRUStats()
 	if err != nil {
@@ -482,12 +506,12 @@ func statsLRU(c *client.Client) error {
 	fallback, _ := c.GetLRUFallbackStats()
 
 	fmt.Println("LRU Stats:")
-	fmt.Printf("  Total:    v1=%d v2=%d\n", stats.V1, stats.V2)
+	fmt.Printf("  Total:    total_packets=%d lru_hits=%d\n", stats.V1, stats.V2)
 	if miss != nil {
-		fmt.Printf("  Miss:     v1=%d v2=%d\n", miss.V1, miss.V2)
+		fmt.Printf("  Miss:     tcp_syn_misses=%d non_syn_misses=%d\n", miss.V1, miss.V2)
 	}
 	if fallback != nil {
-		fmt.Printf("  Fallback: v1=%d v2=%d\n", fallback.V1, fallback.V2)
+		fmt.Printf("  Fallback: fallback_lru_hits=%d\n", fallback.V1)
 	}
 	return nil
 }
@@ -523,9 +547,9 @@ func statsDecap(c *client.Client) error {
 	inline, _ := c.GetInlineDecapStats()
 
 	fmt.Println("Decap Stats:")
-	fmt.Printf("  Decap:   packets=%d bytes=%d\n", stats.V1, stats.V2)
+	fmt.Printf("  Decap:   ipv4_decapsulated=%d ipv6_decapsulated=%d\n", stats.V1, stats.V2)
 	if inline != nil {
-		fmt.Printf("  Inline:  packets=%d bytes=%d\n", inline.V1, inline.V2)
+		fmt.Printf("  Inline:  packets_decapsulated_inline=%d\n", inline.V1)
 	}
 	return nil
 }
@@ -537,8 +561,8 @@ func statsCHDrop(c *client.Client) error {
 	}
 
 	fmt.Println("CH Drop Stats:")
-	fmt.Printf("  Packets: %d\n", stats.V1)
-	fmt.Printf("  Bytes:   %d\n", stats.V2)
+	fmt.Printf("  Real ID Out of Bounds: %d\n", stats.V1)
+	fmt.Printf("  Real #0 (Unmapped):    %d\n", stats.V2)
 	return nil
 }
 
@@ -549,8 +573,8 @@ func statsICMPTooBig(c *client.Client) error {
 	}
 
 	fmt.Println("ICMP Too Big Stats:")
-	fmt.Printf("  Packets: %d\n", stats.V1)
-	fmt.Printf("  Bytes:   %d\n", stats.V2)
+	fmt.Printf("  ICMPv4: %d\n", stats.V1)
+	fmt.Printf("  ICMPv6: %d\n", stats.V2)
 	return nil
 }
 
@@ -561,8 +585,8 @@ func statsSrcRouting(c *client.Client) error {
 	}
 
 	fmt.Println("Source Routing Stats:")
-	fmt.Printf("  Packets: %d\n", stats.V1)
-	fmt.Printf("  Bytes:   %d\n", stats.V2)
+	fmt.Printf("  Local Backends:    %d\n", stats.V1)
+	fmt.Printf("  Remote (LPM):      %d\n", stats.V2)
 	return nil
 }
 
@@ -613,6 +637,17 @@ func statsWatch(c *client.Client, cmd string, args []string, interval int) error
 		entries = []statsEntry{
 			{"VIP", func() (*client.LBStats, error) { return c.GetVIPStats(args[0], uint16(port), proto) }},
 		}
+	case "real":
+		if len(args) < 1 {
+			return fmt.Errorf("usage: stats real <address> --watch")
+		}
+		index, err := c.GetRealIndex(args[0])
+		if err != nil {
+			return fmt.Errorf("failed to get real index: %w", err)
+		}
+		entries = []statsEntry{
+			{"Real " + args[0], func() (*client.LBStats, error) { return c.GetRealStats(index) }},
+		}
 	case "lru":
 		entries = []statsEntry{
 			{"LRU Total", c.GetLRUStats},
@@ -662,7 +697,7 @@ func statsWatch(c *client.Client, cmd string, args []string, interval int) error
 	prev := make(map[string]*client.LBStats)
 
 	// Print header
-	fmt.Printf("%-20s %15s %15s %15s %15s\n", "COUNTER", "PACKETS", "PPS", "BYTES", "BPS")
+	fmt.Printf("%-20s %15s %15s %15s %15s\n", "COUNTER", "V1", "V1/s", "V2", "V2/s")
 	fmt.Println(strings.Repeat("-", 85))
 
 	ticker := time.NewTicker(time.Duration(interval) * time.Second)
