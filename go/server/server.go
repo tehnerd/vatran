@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/tehnerd/vatran/go/katran"
+	"github.com/tehnerd/vatran/go/server/auth"
+	"github.com/tehnerd/vatran/go/server/handlers"
 	"github.com/tehnerd/vatran/go/server/lb"
 	"github.com/tehnerd/vatran/go/server/middleware"
 )
@@ -24,6 +26,8 @@ type Server struct {
 	httpServer    *http.Server
 	mux           *http.ServeMux
 	authenticator middleware.Authenticator
+	basicAuth     *auth.BasicAuthenticator
+	authHandler   *handlers.AuthHandler
 }
 
 // New creates a new Server with the provided configuration.
@@ -64,8 +68,13 @@ func (s *Server) Start() error {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
 
+	// Initialize auth if enabled
+	if err := s.initializeAuth(); err != nil {
+		return fmt.Errorf("failed to initialize authentication: %w", err)
+	}
+
 	// Register routes
-	RegisterRoutes(s.mux, s.config)
+	RegisterRoutes(s.mux, s.config, s.authHandler)
 
 	// Build handler chain with middleware
 	var handler http.Handler = s.mux
@@ -133,11 +142,28 @@ func (s *Server) StartAsync() <-chan error {
 //
 // Returns an error if shutdown fails.
 func (s *Server) Stop(ctx context.Context) error {
-	if s.httpServer == nil {
-		return nil
-	}
 	log.Println("Shutting down server...")
-	return s.httpServer.Shutdown(ctx)
+
+	var errs []error
+
+	// Shutdown HTTP server
+	if s.httpServer != nil {
+		if err := s.httpServer.Shutdown(ctx); err != nil {
+			errs = append(errs, fmt.Errorf("http server shutdown: %w", err))
+		}
+	}
+
+	// Close auth store
+	if s.basicAuth != nil {
+		if err := s.basicAuth.Close(); err != nil {
+			errs = append(errs, fmt.Errorf("auth store close: %w", err))
+		}
+	}
+
+	if len(errs) > 0 {
+		return errs[0]
+	}
+	return nil
 }
 
 // RunWithGracefulShutdown starts the server and handles graceful shutdown on SIGINT/SIGTERM.
@@ -378,4 +404,74 @@ func (s *Server) buildTLSConfig() (*tls.Config, error) {
 	}
 
 	return tlsConfig, nil
+}
+
+// initializeAuth initializes the authentication system if enabled.
+func (s *Server) initializeAuth() error {
+	if s.config.Auth == nil || !s.config.Auth.Enabled {
+		// Auth not enabled, keep using the default NoOpAuthenticator
+		return nil
+	}
+
+	log.Println("Initializing authentication...")
+
+	// Create SQLite store
+	store, err := auth.NewStore(s.config.Auth.DatabasePath)
+	if err != nil {
+		return fmt.Errorf("failed to create auth store: %w", err)
+	}
+
+	// Create BasicAuthenticator
+	s.basicAuth = auth.NewBasicAuthenticator(
+		store,
+		s.config.Auth.BcryptCost,
+		s.config.Auth.SessionTimeout,
+		s.config.Auth.AllowLocalhost,
+		s.config.Auth.ExemptPaths,
+		s.config.IsTLS(),
+	)
+
+	// Set as the server's authenticator
+	s.authenticator = s.basicAuth
+
+	// Create auth handler for login/logout routes
+	s.authHandler = handlers.NewAuthHandler(s.basicAuth)
+
+	// Bootstrap admin user if configured and no users exist
+	if s.config.Auth.BootstrapAdmin != nil {
+		if err := s.bootstrapAdmin(); err != nil {
+			return fmt.Errorf("failed to bootstrap admin: %w", err)
+		}
+	}
+
+	log.Printf("Authentication initialized with database at %s", s.config.Auth.DatabasePath)
+	return nil
+}
+
+// bootstrapAdmin creates the bootstrap admin user if no users exist.
+func (s *Server) bootstrapAdmin() error {
+	bootstrap := s.config.Auth.BootstrapAdmin
+	if bootstrap == nil || bootstrap.Username == "" || bootstrap.Password == "" {
+		return nil
+	}
+
+	// Check if any users exist
+	count, err := s.basicAuth.UserCount()
+	if err != nil {
+		return fmt.Errorf("failed to check user count: %w", err)
+	}
+
+	if count > 0 {
+		log.Printf("Skipping bootstrap admin creation: %d user(s) already exist", count)
+		return nil
+	}
+
+	// Create admin user
+	_, err = s.basicAuth.CreateUser(bootstrap.Username, bootstrap.Password)
+	if err != nil {
+		return fmt.Errorf("failed to create bootstrap admin: %w", err)
+	}
+
+	log.Printf("Created bootstrap admin user: %s", bootstrap.Username)
+	return nil
 }

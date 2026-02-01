@@ -39,6 +39,20 @@ server:
   # Base directory for BPF programs
   bpf_prog_dir: "/path/to/bpf"
 
+  # Authentication configuration (optional)
+  # auth:
+  #   enabled: false                          # Enable authentication
+  #   database_path: "/var/lib/katran/auth.db"  # SQLite database path
+  #   allow_localhost: true                   # Bypass auth for localhost
+  #   session_timeout: 24                     # Session timeout in hours
+  #   bcrypt_cost: 12                         # bcrypt cost factor
+  #   exempt_paths:                           # Paths exempt from auth
+  #     - "/health"
+  #     - "/static/*"
+  #   bootstrap_admin:                        # Initial admin user (created if no users exist)
+  #     username: "admin"
+  #     password: "changeme"                  # CHANGE THIS IN PRODUCTION
+
 #------------------------------------------------------------------------------
 # Load Balancer Configuration
 #------------------------------------------------------------------------------

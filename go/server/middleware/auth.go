@@ -3,6 +3,8 @@ package middleware
 import (
 	"context"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/tehnerd/vatran/go/server/models"
 )
@@ -75,7 +77,15 @@ func Auth(auth Authenticator) func(http.Handler) http.Handler {
 				if result.Message != "" {
 					msg = result.Message
 				}
-				models.WriteError(w, http.StatusUnauthorized, models.NewAPIError(models.CodeUnauthorized, msg))
+
+				// Check if this is an API request or a browser request
+				if isAPIRequest(r) {
+					// API requests get JSON 401 response
+					models.WriteError(w, http.StatusUnauthorized, models.NewAPIError(models.CodeUnauthorized, msg))
+				} else {
+					// Browser requests get redirected to login
+					redirectToLogin(w, r)
+				}
 				return
 			}
 
@@ -84,6 +94,54 @@ func Auth(auth Authenticator) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+// isAPIRequest determines if the request is an API request vs a browser request.
+// API requests include:
+// - Requests to /api/* paths
+// - Requests with Accept: application/json
+// - Requests with X-Requested-With: XMLHttpRequest (AJAX)
+//
+// Parameters:
+//   - r: The HTTP request.
+//
+// Returns true if this is an API request.
+func isAPIRequest(r *http.Request) bool {
+	// Check path prefix
+	if strings.HasPrefix(r.URL.Path, "/api/") {
+		return true
+	}
+
+	// Check Accept header for JSON
+	accept := r.Header.Get("Accept")
+	if strings.Contains(accept, "application/json") {
+		return true
+	}
+
+	// Check X-Requested-With header (AJAX requests)
+	if r.Header.Get("X-Requested-With") == "XMLHttpRequest" {
+		return true
+	}
+
+	return false
+}
+
+// redirectToLogin redirects the request to the login page with a redirect parameter.
+//
+// Parameters:
+//   - w: The http.ResponseWriter.
+//   - r: The HTTP request.
+func redirectToLogin(w http.ResponseWriter, r *http.Request) {
+	// Build redirect URL with original request path
+	loginURL := "/login"
+	if r.URL.Path != "/" && r.URL.Path != "/login" {
+		redirectParam := r.URL.Path
+		if r.URL.RawQuery != "" {
+			redirectParam += "?" + r.URL.RawQuery
+		}
+		loginURL = "/login?redirect=" + url.QueryEscape(redirectParam)
+	}
+	http.Redirect(w, r, loginURL, http.StatusFound)
 }
 
 // GetUserID retrieves the user ID from the request context.

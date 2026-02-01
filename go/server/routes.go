@@ -21,7 +21,8 @@ const (
 // Parameters:
 //   - mux: The http.ServeMux to register routes on.
 //   - config: The server configuration.
-func RegisterRoutes(mux *http.ServeMux, config *Config) {
+//   - authHandler: Optional auth handler for login/logout routes.
+func RegisterRoutes(mux *http.ServeMux, config *Config, authHandler *handlers.AuthHandler) {
 	// Initialize handlers
 	lifecycleHandler := handlers.NewLifecycleHandler(config.BPFProgDir)
 	vipHandler := handlers.NewVIPHandler()
@@ -126,6 +127,12 @@ func RegisterRoutes(mux *http.ServeMux, config *Config) {
 	// Config export endpoints
 	mux.HandleFunc(APIBasePath+"/config/export", configHandler.HandleExportConfig)
 	mux.HandleFunc(APIBasePath+"/config/export/json", configHandler.HandleExportConfigJSON)
+
+	// Auth endpoints (if auth is enabled)
+	if authHandler != nil {
+		mux.HandleFunc("/login", authHandler.HandleLogin)
+		mux.HandleFunc("/logout", authHandler.HandleLogout)
+	}
 
 	// Serve SPA static files if staticDir is configured
 	if config.StaticDir != "" {

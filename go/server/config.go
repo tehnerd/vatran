@@ -26,6 +26,32 @@ type TLSConfig struct {
 	ClientCAFile string
 }
 
+// AuthConfig contains authentication configuration.
+type AuthConfig struct {
+	// Enabled indicates whether authentication is enabled.
+	Enabled bool
+	// DatabasePath is the path to the SQLite database for users and sessions.
+	DatabasePath string
+	// AllowLocalhost bypasses authentication for localhost requests.
+	AllowLocalhost bool
+	// SessionTimeout is the session timeout in hours (default: 24).
+	SessionTimeout int
+	// BcryptCost is the bcrypt cost factor for password hashing (default: 12).
+	BcryptCost int
+	// ExemptPaths is a list of paths exempt from authentication.
+	ExemptPaths []string
+	// BootstrapAdmin contains bootstrap admin user configuration.
+	BootstrapAdmin *BootstrapAdminConfig
+}
+
+// BootstrapAdminConfig contains bootstrap admin user configuration.
+type BootstrapAdminConfig struct {
+	// Username is the admin username.
+	Username string
+	// Password is the admin password (will be hashed on first run).
+	Password string
+}
+
 // Config contains the server configuration.
 type Config struct {
 	// Host is the host to bind to (default: "").
@@ -34,6 +60,8 @@ type Config struct {
 	Port int
 	// TLS contains TLS configuration. If nil, HTTP is used.
 	TLS *TLSConfig
+	// Auth contains authentication configuration. If nil, auth is disabled.
+	Auth *AuthConfig
 	// ReadTimeout is the maximum duration for reading the entire request (default: 30s).
 	ReadTimeout int
 	// WriteTimeout is the maximum duration before timing out writes of the response (default: 30s).
@@ -139,6 +167,12 @@ func (c *Config) GetStaticDir() string { return c.StaticDir }
 // GetBPFProgDir returns the BPF program directory.
 func (c *Config) GetBPFProgDir() string { return c.BPFProgDir }
 
+// GetAuth returns the authentication configuration.
+func (c *Config) GetAuth() *AuthConfig { return c.Auth }
+
+// IsAuthEnabled returns whether authentication is enabled.
+func (c *Config) IsAuthEnabled() bool { return c.Auth != nil && c.Auth.Enabled }
+
 // GetTLS returns the TLS configuration info.
 func (c *Config) GetTLS() *types.TLSConfigInfo {
 	if c.TLS == nil {
@@ -174,6 +208,8 @@ type ServerYAMLConfig struct {
 	Port int `yaml:"port"`
 	// TLS contains TLS configuration (optional).
 	TLS *TLSYAMLConfig `yaml:"tls,omitempty"`
+	// Auth contains authentication configuration (optional).
+	Auth *AuthYAMLConfig `yaml:"auth,omitempty"`
 	// ReadTimeout is the read timeout in seconds.
 	ReadTimeout int `yaml:"read_timeout"`
 	// WriteTimeout is the write timeout in seconds.
@@ -206,6 +242,32 @@ type TLSYAMLConfig struct {
 	ClientAuth string `yaml:"client_auth"`
 	// ClientCAFile is the path to the client CA file for mTLS.
 	ClientCAFile string `yaml:"client_ca_file"`
+}
+
+// AuthYAMLConfig contains authentication configuration from YAML.
+type AuthYAMLConfig struct {
+	// Enabled indicates whether authentication is enabled.
+	Enabled bool `yaml:"enabled"`
+	// DatabasePath is the path to the SQLite database.
+	DatabasePath string `yaml:"database_path"`
+	// AllowLocalhost bypasses authentication for localhost requests.
+	AllowLocalhost bool `yaml:"allow_localhost"`
+	// SessionTimeout is the session timeout in hours.
+	SessionTimeout int `yaml:"session_timeout"`
+	// BcryptCost is the bcrypt cost factor.
+	BcryptCost int `yaml:"bcrypt_cost"`
+	// ExemptPaths is a list of paths exempt from authentication.
+	ExemptPaths []string `yaml:"exempt_paths"`
+	// BootstrapAdmin contains bootstrap admin user configuration.
+	BootstrapAdmin *BootstrapAdminYAMLConfig `yaml:"bootstrap_admin,omitempty"`
+}
+
+// BootstrapAdminYAMLConfig contains bootstrap admin user configuration from YAML.
+type BootstrapAdminYAMLConfig struct {
+	// Username is the admin username.
+	Username string `yaml:"username"`
+	// Password is the admin password.
+	Password string `yaml:"password"`
 }
 
 // LBConfig contains load balancer configuration from YAML.
@@ -487,6 +549,35 @@ func (sc *ServerYAMLConfig) ToServerConfig() *Config {
 			cfg.TLS.ClientAuth = tls.RequireAndVerifyClientCert
 		default:
 			cfg.TLS.ClientAuth = tls.NoClientCert
+		}
+	}
+
+	// Convert Auth config
+	if sc.Auth != nil && sc.Auth.Enabled {
+		cfg.Auth = &AuthConfig{
+			Enabled:        sc.Auth.Enabled,
+			DatabasePath:   sc.Auth.DatabasePath,
+			AllowLocalhost: sc.Auth.AllowLocalhost,
+			SessionTimeout: sc.Auth.SessionTimeout,
+			BcryptCost:     sc.Auth.BcryptCost,
+			ExemptPaths:    sc.Auth.ExemptPaths,
+		}
+		// Apply defaults
+		if cfg.Auth.SessionTimeout <= 0 {
+			cfg.Auth.SessionTimeout = 24
+		}
+		if cfg.Auth.BcryptCost <= 0 {
+			cfg.Auth.BcryptCost = 12
+		}
+		if cfg.Auth.DatabasePath == "" {
+			cfg.Auth.DatabasePath = "/var/lib/katran/auth.db"
+		}
+		// Convert bootstrap admin
+		if sc.Auth.BootstrapAdmin != nil {
+			cfg.Auth.BootstrapAdmin = &BootstrapAdminConfig{
+				Username: sc.Auth.BootstrapAdmin.Username,
+				Password: sc.Auth.BootstrapAdmin.Password,
+			}
 		}
 	}
 
