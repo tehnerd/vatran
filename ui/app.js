@@ -48,6 +48,18 @@
     return options.filter((opt) => (value & opt.value) !== 0);
   }
 
+  function parseNumberList(raw, label) {
+    const text = String(raw ?? "").trim();
+    if (!text) return undefined;
+    const parts = text.split(/[\s,]+/).filter(Boolean);
+    const numbers = parts.map((item) => Number(item));
+    const invalid = numbers.findIndex((value) => !Number.isFinite(value) || !Number.isInteger(value));
+    if (invalid !== -1) {
+      throw new Error(`${label} must be a comma- or space-separated list of integers.`);
+    }
+    return numbers;
+  }
+
   function FlagTable({ mask, options, showStatus = false, emptyLabel = "None" }) {
     const value = Number(mask) || 0;
     const rows = showStatus ? options : getEnabledFlags(value, options);
@@ -602,6 +614,8 @@
       max_vips: 512,
       max_reals: 4096,
       hash_func: 0,
+      forwarding_cores: "",
+      numa_nodes: "",
     });
     const [vipForm, setVipForm] = useState({
       address: "",
@@ -651,8 +665,12 @@
     const submitInit = async (event) => {
       event.preventDefault();
       try {
+        const forwardingCores = parseNumberList(initForm.forwarding_cores, "Forwarding cores");
+        const numaNodes = parseNumberList(initForm.numa_nodes, "NUMA nodes");
         const payload = {
           ...initForm,
+          forwarding_cores: forwardingCores,
+          numa_nodes: numaNodes,
           root_map_pos: initForm.root_map_pos === "" ? undefined : Number(initForm.root_map_pos),
           max_vips: Number(initForm.max_vips),
           max_reals: Number(initForm.max_reals),
@@ -881,6 +899,27 @@
                     onInput=${(e) =>
                       setInitForm({ ...initForm, max_reals: e.target.value })}
                   />
+                </label>
+              </div>
+              <div className="form-row">
+                <label className="field">
+                  <span>Forwarding cores (optional)</span>
+                  <input
+                    value=${initForm.forwarding_cores}
+                    onInput=${(e) =>
+                      setInitForm({ ...initForm, forwarding_cores: e.target.value })}
+                    placeholder="0,1,2,3"
+                  />
+                  <span className="muted">Comma or space separated CPU core IDs.</span>
+                </label>
+                <label className="field">
+                  <span>NUMA nodes (optional)</span>
+                  <input
+                    value=${initForm.numa_nodes}
+                    onInput=${(e) => setInitForm({ ...initForm, numa_nodes: e.target.value })}
+                    placeholder="0,0,1,1"
+                  />
+                  <span className="muted">Match the forwarding cores length.</span>
                 </label>
               </div>
               <label className="field checkbox">
