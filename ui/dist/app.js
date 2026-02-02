@@ -135,7 +135,7 @@
           </${L}>
         </nav>
       </header>
-    `}function Ge(){let{addToast:e}=W(),[t,a]=h({initialized:!1,ready:!1}),[o,c]=h([]),[b,r]=h(""),[l,p]=h(!1),[d,m]=h(!1),[s,g]=h({main_interface:"",balancer_prog_path:"",healthchecking_prog_path:"",default_mac:"",local_mac:"",root_map_path:"",root_map_pos:2,katran_src_v4:"",katran_src_v6:"",use_root_map:!1,max_vips:512,max_reals:4096,hash_func:0,forwarding_cores:"",numa_nodes:""}),[y,w]=h({address:"",port:80,proto:6,flags:0}),T=async()=>{try{let n=await N.get("/lb/status"),v=await N.get("/vips"),f=await Promise.all((v||[]).map(async S=>{try{let C=await N.get("/vips/flags",{address:S.address,port:S.port,proto:S.proto});return{...S,flags:C?.flags??0}}catch{return{...S,flags:null}}}));a(n||{initialized:!1,ready:!1}),c(f),r("")}catch(n){r(n.message||"request failed")}};A(()=>{let n=!0;return(async()=>{n&&await T()})(),()=>{n=!1}},[]);let _=async n=>{n.preventDefault();try{let v=le(s.forwarding_cores,"Forwarding cores"),f=le(s.numa_nodes,"NUMA nodes"),S={...s,forwarding_cores:v,numa_nodes:f,root_map_pos:s.root_map_pos===""?void 0:Number(s.root_map_pos),max_vips:Number(s.max_vips),max_reals:Number(s.max_reals),hash_func:Number(s.hash_func)};await N.post("/lb/create",S),r(""),p(!1),e("Load balancer initialized.","success"),await T()}catch(v){r(v.message||"request failed"),e(v.message||"Initialize failed.","error")}},P=async n=>{n.preventDefault();try{await N.post("/vips",{...y,port:Number(y.port),proto:Number(y.proto),flags:Number(y.flags||0)}),w({address:"",port:80,proto:6,flags:0}),r(""),m(!1),e("VIP created.","success"),await T()}catch(v){r(v.message||"request failed"),e(v.message||"VIP create failed.","error")}},R=async()=>{try{await N.post("/lb/load-bpf-progs"),r(""),e("BPF programs loaded.","success"),await T()}catch(n){r(n.message||"request failed"),e(n.message||"Load BPF programs failed.","error")}},x=async()=>{try{await N.post("/lb/attach-bpf-progs"),r(""),e("BPF programs attached.","success"),await T()}catch(n){r(n.message||"request failed"),e(n.message||"Attach BPF programs failed.","error")}};return i`
+    `}function Ge(){let{addToast:e}=W(),[t,a]=h({initialized:!1,ready:!1}),[o,c]=h([]),[b,r]=h(""),[l,p]=h(!1),[d,m]=h(!1),[s,g]=h({main_interface:"",balancer_prog_path:"",healthchecking_prog_path:"",default_mac:"",local_mac:"",root_map_path:"",root_map_pos:2,katran_src_v4:"",katran_src_v6:"",use_root_map:!1,max_vips:512,max_reals:4096,hash_function:"maglev_v2",forwarding_cores:"",numa_nodes:""}),[y,w]=h({address:"",port:80,proto:6,flags:0}),T=async()=>{try{let n=await N.get("/lb/status"),v=await N.get("/vips"),f=await Promise.all((v||[]).map(async S=>{try{let C=await N.get("/vips/flags",{address:S.address,port:S.port,proto:S.proto});return{...S,flags:C?.flags??0}}catch{return{...S,flags:null}}}));a(n||{initialized:!1,ready:!1}),c(f),r("")}catch(n){r(n.message||"request failed")}};A(()=>{let n=!0;return(async()=>{n&&await T()})(),()=>{n=!1}},[]);let _=async n=>{n.preventDefault();try{let v=le(s.forwarding_cores,"Forwarding cores"),f=le(s.numa_nodes,"NUMA nodes"),S={...s,forwarding_cores:v,numa_nodes:f,root_map_pos:s.root_map_pos===""?void 0:Number(s.root_map_pos),max_vips:Number(s.max_vips),max_reals:Number(s.max_reals),hash_function:s.hash_function};await N.post("/lb/create",S),r(""),p(!1),e("Load balancer initialized.","success"),await T()}catch(v){r(v.message||"request failed"),e(v.message||"Initialize failed.","error")}},P=async n=>{n.preventDefault();try{await N.post("/vips",{...y,port:Number(y.port),proto:Number(y.proto),flags:Number(y.flags||0)}),w({address:"",port:80,proto:6,flags:0}),r(""),m(!1),e("VIP created.","success"),await T()}catch(v){r(v.message||"request failed"),e(v.message||"VIP create failed.","error")}},R=async()=>{try{await N.post("/lb/load-bpf-progs"),r(""),e("BPF programs loaded.","success"),await T()}catch(n){r(n.message||"request failed"),e(n.message||"Load BPF programs failed.","error")}},x=async()=>{try{await N.post("/lb/attach-bpf-progs"),r(""),e("BPF programs attached.","success"),await T()}catch(n){r(n.message||"request failed"),e(n.message||"Attach BPF programs failed.","error")}};return i`
       <main>
         <section className="card">
           <h2>Load balancer</h2>
@@ -222,12 +222,13 @@
                 </label>
                 <label className="field">
                   <span>Hash function</span>
-                  <input
-                    type="number"
-                    min="0"
-                    value=${s.hash_func}
-                    onInput=${n=>g({...s,hash_func:n.target.value})}
-                  />
+                  <select
+                    value=${s.hash_function}
+                    onInput=${n=>g({...s,hash_function:n.target.value})}
+                  >
+                    <option value="maglev">maglev</option>
+                    <option value="maglev_v2">maglev_v2</option>
+                  </select>
                 </label>
               </div>
               <div className="form-row">

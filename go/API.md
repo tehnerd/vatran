@@ -105,9 +105,10 @@ Create a new load balancer instance.
   "hc_interface_index": 0,
   "katran_src_v4": "10.0.0.1",
   "katran_src_v6": "fc00::1",
-  "hash_func": 0
+  "hash_function": "maglev_v2"
 }
 ```
+`hash_function` defaults to `"maglev_v2"` when omitted.
 
 **Response:**
 ```json

@@ -613,7 +613,7 @@
       use_root_map: false,
       max_vips: 512,
       max_reals: 4096,
-      hash_func: 0,
+      hash_function: "maglev_v2",
       forwarding_cores: "",
       numa_nodes: "",
     });
@@ -674,7 +674,7 @@
           root_map_pos: initForm.root_map_pos === "" ? undefined : Number(initForm.root_map_pos),
           max_vips: Number(initForm.max_vips),
           max_reals: Number(initForm.max_reals),
-          hash_func: Number(initForm.hash_func),
+          hash_function: initForm.hash_function,
         };
         await api.post("/lb/create", payload);
         setError("");
@@ -829,13 +829,14 @@
                 </label>
                 <label className="field">
                   <span>Hash function</span>
-                  <input
-                    type="number"
-                    min="0"
-                    value=${initForm.hash_func}
+                  <select
+                    value=${initForm.hash_function}
                     onInput=${(e) =>
-                      setInitForm({ ...initForm, hash_func: e.target.value })}
-                  />
+                      setInitForm({ ...initForm, hash_function: e.target.value })}
+                  >
+                    <option value="maglev">maglev</option>
+                    <option value="maglev_v2">maglev_v2</option>
+                  </select>
                 </label>
               </div>
               <div className="form-row">

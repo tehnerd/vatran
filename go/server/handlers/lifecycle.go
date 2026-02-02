@@ -10,6 +10,7 @@ import (
 	"github.com/tehnerd/vatran/go/katran"
 	"github.com/tehnerd/vatran/go/server/lb"
 	"github.com/tehnerd/vatran/go/server/models"
+	"github.com/tehnerd/vatran/go/server/types"
 )
 
 // ErrPathTraversal is returned when a path escapes the base directory.
@@ -301,7 +302,9 @@ func requestToConfig(req *models.CreateLBRequest, bpfProgDir string) *katran.Con
 	if req.HCInterfaceIndex > 0 {
 		cfg.HCInterfaceIndex = req.HCInterfaceIndex
 	}
-	cfg.HashFunc = katran.HashFunction(req.HashFunc)
+	if strings.TrimSpace(req.HashFunction) != "" {
+		cfg.HashFunc = katran.HashFunction(types.HashFunctionToInt(req.HashFunction))
+	}
 
 	return cfg
 }

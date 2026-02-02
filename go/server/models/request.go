@@ -68,8 +68,9 @@ type CreateLBRequest struct {
 	KatranSrcV4 string `json:"katran_src_v4,omitempty"`
 	// KatranSrcV6 is the IPv6 source address for GUE-encapsulated packets.
 	KatranSrcV6 string `json:"katran_src_v6,omitempty"`
-	// HashFunc is the hash function algorithm for consistent hashing (0=maglev, 1=maglevV2).
-	HashFunc int `json:"hash_func,omitempty"`
+	// HashFunction is the hash function algorithm for consistent hashing ("maglev" or "maglev_v2").
+	// Defaults to "maglev_v2" when omitted.
+	HashFunction string `json:"hash_function,omitempty"`
 }
 
 // VIPRequest represents a VIP key in API requests.

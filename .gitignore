@@ -5,3 +5,4 @@ plan.md
 thirdparty/
 go/cmd/katran-server/katran-server
 go/cmd/katran-cli/katran-cli
+go/cmd/authctl/authctl
