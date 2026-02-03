@@ -42,6 +42,10 @@ func RegisterRoutes(mux *http.ServeMux, config *Config, authHandler *handlers.Au
 	// Health check endpoint (not versioned)
 	mux.HandleFunc("/health", handleHealth)
 
+	// Prometheus metrics endpoint (not versioned)
+	metricsHandler := handlers.NewMetricsHandler()
+	mux.HandleFunc("/metrics", metricsHandler.HandleMetrics)
+
 	// Lifecycle endpoints
 	mux.HandleFunc(APIBasePath+"/lb/create", lifecycleHandler.HandleCreate)
 	mux.HandleFunc(APIBasePath+"/lb/close", lifecycleHandler.HandleClose)

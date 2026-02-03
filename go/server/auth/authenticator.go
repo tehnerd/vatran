@@ -43,8 +43,8 @@ func NewBasicAuthenticator(
 	exemptPaths []string,
 	isTLS bool,
 ) *BasicAuthenticator {
-	// Always exempt /login and /health
-	defaultExempts := []string{"/login", "/health"}
+	// Always exempt /login, /health, and /metrics
+	defaultExempts := []string{"/login", "/health", "/metrics"}
 	allExempts := append(defaultExempts, exemptPaths...)
 
 	return &BasicAuthenticator{
