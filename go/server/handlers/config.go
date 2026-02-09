@@ -142,6 +142,7 @@ func (h *ConfigHandler) HandleExportConfigJSON(w http.ResponseWriter, r *http.Re
 					Address: b.Address,
 					Weight:  b.Weight,
 					Flags:   b.Flags,
+					Healthy: b.Healthy,
 				}
 			}
 			response.TargetGroups[targetGroupName] = backends
@@ -161,11 +162,14 @@ func (h *ConfigHandler) HandleExportConfigJSON(w http.ResponseWriter, r *http.Re
 }
 
 // getAllVIPsWithBackends retrieves all VIPs and their backends.
+// Queries the state store for reals (includes unhealthy). Falls back to katran if VIP not in state.
 func (h *ConfigHandler) getAllVIPsWithBackends(lbInstance *katran.LoadBalancer) ([]types.VIPWithBackends, error) {
 	vips, err := lbInstance.GetAllVIPs()
 	if err != nil {
 		return nil, err
 	}
+
+	state, stateOK := h.manager.GetState()
 
 	result := make([]types.VIPWithBackends, 0, len(vips))
 	for _, vip := range vips {
@@ -178,18 +182,39 @@ func (h *ConfigHandler) getAllVIPsWithBackends(lbInstance *katran.LoadBalancer) 
 		// Get flags for this VIP
 		flags, _ := lbInstance.GetVIPFlags(vipKey)
 
-		// Get backends for this VIP
-		reals, err := lbInstance.GetRealsForVIP(vipKey)
-		if err != nil {
-			return nil, err
+		var backends []types.BackendConfig
+
+		// Try state store first (includes unhealthy reals)
+		if stateOK {
+			stateKey := lb.VIPKeyString(vip.Address, vip.Port, vip.Proto)
+			stateReals := state.GetReals(stateKey)
+			if stateReals != nil {
+				backends = make([]types.BackendConfig, len(stateReals))
+				for i, rs := range stateReals {
+					backends[i] = types.BackendConfig{
+						Address: rs.Address,
+						Weight:  rs.Weight,
+						Flags:   rs.Flags,
+						Healthy: rs.Healthy,
+					}
+				}
+			}
 		}
 
-		backends := make([]types.BackendConfig, len(reals))
-		for i, real := range reals {
-			backends[i] = types.BackendConfig{
-				Address: real.Address,
-				Weight:  real.Weight,
-				Flags:   real.Flags,
+		// Fall back to katran if VIP not in state store
+		if backends == nil {
+			reals, err := lbInstance.GetRealsForVIP(vipKey)
+			if err != nil {
+				return nil, err
+			}
+			backends = make([]types.BackendConfig, len(reals))
+			for i, real := range reals {
+				backends[i] = types.BackendConfig{
+					Address: real.Address,
+					Weight:  real.Weight,
+					Flags:   real.Flags,
+					Healthy: true,
+				}
 			}
 		}
 
@@ -245,6 +270,7 @@ func (h *ConfigHandler) extractKatranConfigFromManager() *types.KatranConfigExpo
 		CleanupOnShutdown:      cfg.CleanupOnShutdown,
 		Testing:                cfg.Testing,
 		HashFunc:               int(cfg.HashFunc),
+		HealthcheckerEndpoint:  h.manager.GetHealthcheckerEndpoint(),
 	}
 }
 
@@ -324,13 +350,14 @@ func (h *ConfigHandler) buildLBConfigResponse(cfg *types.KatranConfigExport) *LB
 			SrcV6: cfg.KatranSrcV6,
 		},
 		Features: FeaturesExportResponse{
-			EnableHealthcheck:  cfg.EnableHC,
-			TunnelBasedHCEncap: cfg.TunnelBasedHCEncap,
-			FlowDebug:          cfg.FlowDebug,
-			EnableCIDV3:        cfg.EnableCIDV3,
-			MemlockUnlimited:   cfg.MemlockUnlimited,
-			CleanupOnShutdown:  cfg.CleanupOnShutdown,
-			Testing:            cfg.Testing,
+			EnableHealthcheck:     cfg.EnableHC,
+			TunnelBasedHCEncap:    cfg.TunnelBasedHCEncap,
+			FlowDebug:             cfg.FlowDebug,
+			EnableCIDV3:           cfg.EnableCIDV3,
+			MemlockUnlimited:      cfg.MemlockUnlimited,
+			CleanupOnShutdown:     cfg.CleanupOnShutdown,
+			Testing:               cfg.Testing,
+			HealthcheckerEndpoint: cfg.HealthcheckerEndpoint,
 		},
 		HashFunction: types.IntToHashFunction(cfg.HashFunc),
 	}
@@ -343,7 +370,7 @@ func hashBackendsForExport(backends []types.BackendConfig) string {
 	}
 	var parts []string
 	for _, b := range backends {
-		parts = append(parts, fmt.Sprintf("%s:%d:%d", b.Address, b.Weight, b.Flags))
+		parts = append(parts, fmt.Sprintf("%s:%d:%d:%t", b.Address, b.Weight, b.Flags, b.Healthy))
 	}
 	return joinStrings(parts, ",")
 }
@@ -462,13 +489,14 @@ type EncapsulationExportResponse struct {
 
 // FeaturesExportResponse contains feature flags for export.
 type FeaturesExportResponse struct {
-	EnableHealthcheck  bool `json:"enable_healthcheck"`
-	TunnelBasedHCEncap bool `json:"tunnel_based_hc_encap"`
-	FlowDebug          bool `json:"flow_debug"`
-	EnableCIDV3        bool `json:"enable_cid_v3"`
-	MemlockUnlimited   bool `json:"memlock_unlimited"`
-	CleanupOnShutdown  bool `json:"cleanup_on_shutdown"`
-	Testing            bool `json:"testing"`
+	EnableHealthcheck     bool   `json:"enable_healthcheck"`
+	TunnelBasedHCEncap    bool   `json:"tunnel_based_hc_encap"`
+	FlowDebug             bool   `json:"flow_debug"`
+	EnableCIDV3           bool   `json:"enable_cid_v3"`
+	MemlockUnlimited      bool   `json:"memlock_unlimited"`
+	CleanupOnShutdown     bool   `json:"cleanup_on_shutdown"`
+	Testing               bool   `json:"testing"`
+	HealthcheckerEndpoint string `json:"healthchecker_endpoint,omitempty"`
 }
 
 // BackendExportResponse contains backend config for export.
@@ -476,6 +504,7 @@ type BackendExportResponse struct {
 	Address string `json:"address"`
 	Weight  uint32 `json:"weight"`
 	Flags   uint8  `json:"flags"`
+	Healthy bool   `json:"healthy"`
 }
 
 // VIPExportResponse contains VIP config for export.

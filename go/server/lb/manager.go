@@ -9,11 +9,13 @@ import (
 // Manager is a singleton manager for the Katran LoadBalancer instance.
 // It provides thread-safe access to create, get, and close the load balancer.
 type Manager struct {
-	mu          sync.RWMutex
-	lb          *katran.LoadBalancer
-	config      *katran.Config
-	initialized bool
-	ready       bool
+	mu                    sync.RWMutex
+	lb                    *katran.LoadBalancer
+	config                *katran.Config
+	initialized           bool
+	ready                 bool
+	state                 *VIPRealsState
+	healthcheckerEndpoint string
 }
 
 var (
@@ -29,6 +31,18 @@ func GetManager() *Manager {
 		instance = &Manager{}
 	})
 	return instance
+}
+
+// SetHealthcheckerEndpoint sets the healthchecker endpoint and creates the state store.
+// This should be called before Create() so the state store is ready for use.
+//
+// Parameters:
+//   - endpoint: The URL of the healthchecker service API endpoint.
+func (m *Manager) SetHealthcheckerEndpoint(endpoint string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.healthcheckerEndpoint = endpoint
+	m.state = NewVIPRealsState(endpoint)
 }
 
 // Create creates a new LoadBalancer instance with the provided configuration.
@@ -58,6 +72,9 @@ func (m *Manager) Create(cfg *katran.Config) error {
 	m.config = cfg
 	m.initialized = true
 	m.ready = false
+	if m.state == nil {
+		m.state = NewVIPRealsState(m.healthcheckerEndpoint)
+	}
 	return nil
 }
 
@@ -98,6 +115,9 @@ func (m *Manager) Close() error {
 	m.config = nil
 	m.initialized = false
 	m.ready = false
+	if m.state != nil {
+		m.state.Clear()
+	}
 	return err
 }
 
@@ -179,4 +199,22 @@ func (m *Manager) ReloadBalancerProg(path string, cfg *katran.Config) error {
 	}
 
 	return m.lb.ReloadBalancerProg(path, cfg)
+}
+
+// GetState returns the VIP reals state store and whether it is initialized.
+//
+// Returns the VIPRealsState and true if available.
+func (m *Manager) GetState() (*VIPRealsState, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.state, m.state != nil
+}
+
+// GetHealthcheckerEndpoint returns the configured healthchecker endpoint URL.
+//
+// Returns the healthchecker endpoint string.
+func (m *Manager) GetHealthcheckerEndpoint() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.healthcheckerEndpoint
 }

@@ -47,6 +47,8 @@ type RealResponse struct {
 	Weight uint32 `json:"weight"`
 	// Flags contains real-specific flags.
 	Flags uint8 `json:"flags"`
+	// Healthy indicates whether the real server is healthy and receiving traffic.
+	Healthy bool `json:"healthy"`
 }
 
 // RealIndexResponse represents a real server index response.

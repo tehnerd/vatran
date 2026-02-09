@@ -128,16 +128,26 @@ lb:
 
 target_groups:
   # Example: Web servers
+  # The "healthy" field is optional. When omitted, health defaults based on
+  # whether healthchecker_endpoint is configured:
+  #   - No healthchecker_endpoint: defaults to healthy (true)
+  #   - With healthchecker_endpoint: defaults to unhealthy (false)
+  # When healthy=true, the backend receives traffic immediately.
+  # When healthy=false, the backend is tracked but does not receive traffic
+  # until marked healthy via the PUT /api/v1/vips/reals/health endpoint.
   web-servers:
     - address: "10.0.0.1"
       weight: 100
       flags: 0
+      healthy: true           # Explicitly mark as healthy
     - address: "10.0.0.2"
       weight: 100
+      healthy: true
     - address: "10.0.0.3"
       weight: 50              # Lower weight = less traffic
+      healthy: false           # Start unhealthy, will not receive traffic
 
-  # Example: API servers
+  # Example: API servers (healthy field omitted, uses default behavior)
   api-servers:
     - address: "10.0.1.1"
       weight: 100

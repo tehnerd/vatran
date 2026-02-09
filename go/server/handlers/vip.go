@@ -14,6 +14,7 @@ type VIPHandler struct {
 	manager *lb.Manager
 }
 
+
 // NewVIPHandler creates a new VIPHandler.
 //
 // Returns a new VIPHandler instance.
@@ -93,6 +94,12 @@ func (h *VIPHandler) handleAddVIP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Initialize state tracking for this VIP
+	if state, ok := h.manager.GetState(); ok {
+		vipKey := lb.VIPKeyString(req.Address, req.Port, req.Proto)
+		state.InitVIP(vipKey)
+	}
+
 	models.WriteCreated(w, nil)
 }
 
@@ -109,6 +116,12 @@ func (h *VIPHandler) handleDelVIP(w http.ResponseWriter, r *http.Request) {
 		models.WriteError(w, http.StatusBadRequest,
 			models.NewInvalidRequestError("invalid request: "+err.Error()))
 		return
+	}
+
+	// Clean state tracking before deleting VIP (katran's DelVIP handles real cleanup internally)
+	if state, ok := h.manager.GetState(); ok {
+		vipKey := lb.VIPKeyString(req.Address, req.Port, req.Proto)
+		state.CleanVIP(vipKey)
 	}
 
 	vip := katran.VIPKey{

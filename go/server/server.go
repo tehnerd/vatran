@@ -203,6 +203,9 @@ func (s *Server) RunWithGracefulShutdown() error {
 func (s *Server) InitFromConfig(cfg *FullConfig) error {
 	manager := lb.GetManager()
 
+	// Set healthchecker endpoint before creating LB so state store is ready
+	manager.SetHealthcheckerEndpoint(cfg.LB.Features.HealthcheckerEndpoint)
+
 	// Build katran config from YAML config
 	katranCfg := s.buildKatranConfig(cfg)
 
@@ -230,6 +233,9 @@ func (s *Server) InitFromConfig(cfg *FullConfig) error {
 		return fmt.Errorf("load balancer not initialized after creation")
 	}
 
+	// Get state store for health tracking
+	state, _ := manager.GetState()
+
 	// Create VIPs and add backends from target groups
 	for i, vipCfg := range cfg.VIPs {
 		vip := katran.VIPKey{
@@ -243,21 +249,33 @@ func (s *Server) InitFromConfig(cfg *FullConfig) error {
 			return fmt.Errorf("failed to add VIP[%d] %s:%d: %w", i, vipCfg.Address, vipCfg.Port, err)
 		}
 
+		// Initialize state tracking for this VIP
+		vipKey := lb.VIPKeyString(vipCfg.Address, vipCfg.Port, ProtoToNumber(vipCfg.Proto))
+		state.InitVIP(vipKey)
+
 		// Add backends from target group
 		backends := cfg.TargetGroups[vipCfg.TargetGroup]
 		if len(backends) > 0 {
-			reals := make([]katran.Real, len(backends))
-			for j, backend := range backends {
-				reals[j] = katran.Real{
-					Address: backend.Address,
-					Weight:  backend.Weight,
-					Flags:   backend.Flags,
+			// Add all backends to state store, filter healthy for katran
+			var healthyReals []katran.Real
+			for _, backend := range backends {
+				rs := state.AddRealWithHealth(vipKey, backend.Address, backend.Weight, backend.Flags, backend.Healthy || state.DefaultHealthy())
+				if rs.Healthy {
+					healthyReals = append(healthyReals, katran.Real{
+						Address: backend.Address,
+						Weight:  backend.Weight,
+						Flags:   backend.Flags,
+					})
 				}
 			}
 
-			log.Printf("  Adding %d backends from target group %q...", len(reals), vipCfg.TargetGroup)
-			if err := lbInstance.ModifyRealsForVIP(katran.ActionAdd, reals, vip); err != nil {
-				return fmt.Errorf("failed to add backends for VIP[%d]: %w", i, err)
+			if len(healthyReals) > 0 {
+				log.Printf("  Adding %d/%d healthy backends from target group %q...", len(healthyReals), len(backends), vipCfg.TargetGroup)
+				if err := lbInstance.ModifyRealsForVIP(katran.ActionAdd, healthyReals, vip); err != nil {
+					return fmt.Errorf("failed to add backends for VIP[%d]: %w", i, err)
+				}
+			} else {
+				log.Printf("  %d backends from target group %q (0 healthy, waiting for healthchecker)", len(backends), vipCfg.TargetGroup)
 			}
 		}
 	}

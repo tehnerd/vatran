@@ -907,7 +907,7 @@ func hashBackends(backends []BackendConfig) string {
 	}
 	var parts []string
 	for _, b := range backends {
-		parts = append(parts, fmt.Sprintf("%s:%d:%d", b.Address, b.Weight, b.Flags))
+		parts = append(parts, fmt.Sprintf("%s:%d:%d:%t", b.Address, b.Weight, b.Flags, b.Healthy))
 	}
 	return strings.Join(parts, ",")
 }

@@ -298,3 +298,29 @@ type AddSrcIPForPcktEncapRequest struct {
 	// Src is the source IP address (IPv4 or IPv6).
 	Src string `json:"src"`
 }
+
+// UpdateRealHealthRequest represents a request to update a single real's health state.
+type UpdateRealHealthRequest struct {
+	// VIP is the target VIP.
+	VIP VIPRequest `json:"vip"`
+	// Address is the real server IP address.
+	Address string `json:"address"`
+	// Healthy is the new health state.
+	Healthy bool `json:"healthy"`
+}
+
+// BatchUpdateRealHealthRequest represents a request to batch update real health states for a VIP.
+type BatchUpdateRealHealthRequest struct {
+	// VIP is the target VIP.
+	VIP VIPRequest `json:"vip"`
+	// Reals is the list of real health updates.
+	Reals []RealHealthUpdate `json:"reals"`
+}
+
+// RealHealthUpdate represents a health state update for a single real.
+type RealHealthUpdate struct {
+	// Address is the real server IP address.
+	Address string `json:"address"`
+	// Healthy is the new health state.
+	Healthy bool `json:"healthy"`
+}

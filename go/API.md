@@ -315,7 +315,7 @@ Change the hash function for a VIP.
 
 ### GET /api/v1/vips/reals
 
-Get all real servers for a VIP.
+Get all real servers for a VIP. Returns both healthy and unhealthy reals with their health state.
 
 **Query Parameters:**
 - address (string)
@@ -330,11 +330,14 @@ Get all real servers for a VIP.
     {
       "address": "192.168.1.1",
       "weight": 100,
-      "flags": 0
+      "flags": 0,
+      "healthy": true
     }
   ]
 }
 ```
+
+The `healthy` field indicates whether the real server is currently receiving traffic. When `healthy` is `false`, the real is tracked by the server but is not programmed into katran's forwarding plane.
 
 ### POST /api/v1/vips/reals
 
@@ -466,6 +469,71 @@ Modify real server flags.
   "success": true
 }
 ```
+
+### PUT /api/v1/vips/reals/health
+
+Update the health state of a single real server for a VIP. When a real transitions from unhealthy to healthy, it is added to katran's forwarding plane. When it transitions from healthy to unhealthy, it is removed.
+
+**Request Body:**
+```json
+{
+  "vip": {
+    "address": "10.0.0.1",
+    "port": 80,
+    "proto": 6
+  },
+  "address": "192.168.1.1",
+  "healthy": true
+}
+```
+
+**Response:**
+```json
+{
+  "success": true
+}
+```
+
+### PUT /api/v1/vips/reals/health/batch
+
+Batch update health states for multiple real servers of a VIP. Transitions are batched for efficiency.
+
+**Request Body:**
+```json
+{
+  "vip": {
+    "address": "10.0.0.1",
+    "port": 80,
+    "proto": 6
+  },
+  "reals": [
+    {
+      "address": "192.168.1.1",
+      "healthy": true
+    },
+    {
+      "address": "192.168.1.2",
+      "healthy": false
+    }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true
+}
+```
+
+### Health Default Behavior
+
+The default health state of newly added reals depends on the `healthchecker_endpoint` configuration:
+
+- **No `healthchecker_endpoint` configured**: Reals default to **healthy** and immediately receive traffic when added.
+- **`healthchecker_endpoint` configured**: Reals default to **unhealthy** and do not receive traffic until explicitly marked healthy via the health update endpoints.
+
+The `healthy` field can be set explicitly per backend in the YAML configuration to override the default behavior.
 
 ---
 

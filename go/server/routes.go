@@ -62,6 +62,8 @@ func RegisterRoutes(mux *http.ServeMux, config *Config, authHandler *handlers.Au
 	// Real server endpoints
 	mux.HandleFunc(APIBasePath+"/vips/reals", realHandler.HandleVIPReals)
 	mux.HandleFunc(APIBasePath+"/vips/reals/batch", realHandler.HandleBatchModifyReals)
+	mux.HandleFunc(APIBasePath+"/vips/reals/health", realHandler.HandleHealthUpdate)
+	mux.HandleFunc(APIBasePath+"/vips/reals/health/batch", realHandler.HandleBatchHealthUpdate)
 	mux.HandleFunc(APIBasePath+"/reals/index", realHandler.HandleRealIndex)
 	mux.HandleFunc(APIBasePath+"/reals/flags", realHandler.HandleRealFlags)
 

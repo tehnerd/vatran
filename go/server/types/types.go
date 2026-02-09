@@ -49,11 +49,13 @@ func (f ConfigExporterFunc) ExportAsYAML(katranCfg *KatranConfigExport, vips []V
 // BackendConfig represents a backend server in a target group.
 type BackendConfig struct {
 	// Address is the IP address of the backend.
-	Address string `yaml:"address"`
+	Address string `yaml:"address" json:"address"`
 	// Weight is the weight for consistent hashing.
-	Weight uint32 `yaml:"weight"`
+	Weight uint32 `yaml:"weight" json:"weight"`
 	// Flags are backend-specific flags.
-	Flags uint8 `yaml:"flags"`
+	Flags uint8 `yaml:"flags" json:"flags"`
+	// Healthy indicates whether the backend is healthy and receiving traffic.
+	Healthy bool `yaml:"healthy,omitempty" json:"healthy"`
 }
 
 // VIPWithBackends contains a VIP and its backends.
