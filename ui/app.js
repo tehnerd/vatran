@@ -1,5 +1,5 @@
 (() => {
-  const { useEffect, useMemo, useRef, useState, useContext } = React;
+  const { useEffect, useMemo, useRef, useState, useContext, useCallback } = React;
   const {
     BrowserRouter,
     Routes,
@@ -12,6 +12,12 @@
 
   const html = htm.bind(React.createElement);
   const ToastContext = React.createContext({ addToast: () => {} });
+  const AuthContext = React.createContext({
+    required: false,
+    username: "",
+    login: async () => {},
+    logout: async () => {},
+  });
 
   const VIP_FLAG_OPTIONS = [
     { label: "NO_SPORT", value: 1 },
@@ -28,6 +34,20 @@
 
   function useToast() {
     return useContext(ToastContext);
+  }
+
+  function useAuth() {
+    return useContext(AuthContext);
+  }
+
+  class ApiError extends Error {
+    constructor(message, status = 0, code = "") {
+      super(message || "request failed");
+      this.name = "ApiError";
+      this.status = status;
+      this.code = code;
+      this.unauthorized = status === 401 || code === "UNAUTHORIZED";
+    }
   }
 
   function sanitizeFlagId(value) {
@@ -129,10 +149,42 @@
 
   const api = {
     base: "/api/v1",
+    authHandlers: {
+      onUnauthorized: null,
+    },
+    setAuthHandlers(handlers = {}) {
+      api.authHandlers = {
+        onUnauthorized: handlers.onUnauthorized || null,
+      };
+    },
+    notifyUnauthorized(message) {
+      if (typeof api.authHandlers.onUnauthorized === "function") {
+        api.authHandlers.onUnauthorized(message || "Authentication required");
+      }
+    },
+    async parseJSON(res) {
+      try {
+        return await res.json();
+      } catch (err) {
+        return null;
+      }
+    },
+    async buildError(res, payload) {
+      const code = payload?.error?.code || "";
+      const message = payload?.error?.message || `HTTP ${res.status}`;
+      if (res.status === 401 || code === "UNAUTHORIZED") {
+        api.notifyUnauthorized(message);
+      }
+      return new ApiError(message, res.status, code);
+    },
     async request(path, options = {}) {
       const init = {
         method: options.method || "GET",
-        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          ...(options.headers || {}),
+        },
       };
       let url = `${api.base}${path}`;
       if (options.body !== undefined && options.body !== null) {
@@ -155,22 +207,20 @@
             url += `${url.includes("?") ? "&" : "?"}${query}`;
           }
         } else {
+          init.headers["Content-Type"] = "application/json";
           init.body = JSON.stringify(options.body);
         }
       }
       const res = await fetch(url, init);
-      let payload;
-      try {
-        payload = await res.json();
-      } catch (err) {
-        throw new Error("invalid JSON response");
+      const payload = await api.parseJSON(res);
+      if (!payload) {
+        throw new ApiError("invalid JSON response", res.status);
       }
       if (!res.ok) {
-        throw new Error(payload?.error?.message || `HTTP ${res.status}`);
+        throw await api.buildError(res, payload);
       }
       if (!payload.success) {
-        const msg = payload.error?.message || "request failed";
-        throw new Error(msg);
+        throw new ApiError(payload.error?.message || "request failed", res.status, payload.error?.code);
       }
       return payload.data;
     },
@@ -185,6 +235,43 @@
     },
     del(path, body) {
       return api.request(path, { method: "DELETE", body });
+    },
+    async login(username, password) {
+      const res = await fetch("/login", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      });
+      const payload = await api.parseJSON(res);
+      if (!payload) {
+        throw new ApiError("invalid JSON response", res.status);
+      }
+      if (!res.ok) {
+        throw await api.buildError(res, payload);
+      }
+      if (!payload.success) {
+        throw new ApiError(payload.error?.message || "login failed", res.status, payload.error?.code);
+      }
+      return payload.data || {};
+    },
+    async logout() {
+      const res = await fetch("/logout", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      const payload = await api.parseJSON(res);
+      if (!res.ok) {
+        throw await api.buildError(res, payload || {});
+      }
+      if (payload && payload.success === false) {
+        throw new ApiError(payload.error?.message || "logout failed", res.status, payload.error?.code);
+      }
+      return payload?.data || {};
     },
   };
 
@@ -538,7 +625,78 @@
     `;
   }
 
-  function AuthGate({ children }) {
+  function LoginScreen() {
+    const { login } = useAuth();
+    const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+
+    const submit = async (event) => {
+      event.preventDefault();
+      if (!username.trim() || !password) {
+        setError("Username and password are required.");
+        return;
+      }
+      setSubmitting(true);
+      setError("");
+      try {
+        await login(username.trim(), password);
+      } catch (err) {
+        setError(err.message || "Login failed.");
+      } finally {
+        setSubmitting(false);
+      }
+    };
+
+    return html`
+      <main className="auth-main">
+        <section className="auth-card">
+          <h1>Sign in</h1>
+          <p className="muted">Authentication is required to access Vatran.</p>
+          ${error ? html`<p className="error">${error}</p>` : null}
+          <form className="form" onSubmit=${submit}>
+            <label className="field">
+              <span>Username</span>
+              <input
+                value=${username}
+                onInput=${(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                required
+              />
+            </label>
+            <label className="field">
+              <span>Password</span>
+              <input
+                type="password"
+                value=${password}
+                onInput=${(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+              />
+            </label>
+            <button className="btn" type="submit" disabled=${submitting}>
+              ${submitting ? "Signing in..." : "Sign in"}
+            </button>
+          </form>
+        </section>
+      </main>
+    `;
+  }
+
+  function AuthGate({ checking, required, children }) {
+    if (checking) {
+      return html`
+        <main className="auth-main">
+          <section className="auth-card">
+            <p className="muted">Checking authentication...</p>
+          </section>
+        </main>
+      `;
+    }
+    if (required) {
+      return html`<${LoginScreen} />`;
+    }
     return children;
   }
 
@@ -1528,6 +1686,7 @@
     const params = useParams();
     const vip = useMemo(() => parseVipId(params.vipId), [params.vipId]);
     const { points, error } = useStatSeries({ path: "/stats/vip", body: vip });
+    const labels = useMemo(() => getStatLabels("/stats/vip"), []);
     const latest = points[points.length - 1] || {};
     const prev = points[points.length - 2] || {};
     const v1 = Number(latest.v1 ?? 0);
@@ -1536,10 +1695,10 @@
     const d2 = v2 - Number(prev.v2 ?? 0);
     const keys = useMemo(
       () => [
-        { label: "v1", field: "v1", color: "#2f4858", fill: "rgba(47,72,88,0.15)" },
-        { label: "v2", field: "v2", color: "#d97757", fill: "rgba(217,119,87,0.2)" },
+        { label: labels.v1, field: "v1", color: "#2f4858", fill: "rgba(47,72,88,0.15)" },
+        { label: labels.v2, field: "v2", color: "#d97757", fill: "rgba(217,119,87,0.2)" },
       ],
-      []
+      [labels]
     );
 
     return html`
@@ -1562,7 +1721,7 @@
             </thead>
             <tbody>
               <tr>
-                <td>v1</td>
+                <td>${labels.v1}</td>
                 <td>${v1}</td>
                 <td>
                   <span className=${`delta ${d1 < 0 ? "down" : "up"}`}>
@@ -1571,7 +1730,7 @@
                 </td>
               </tr>
               <tr>
-                <td>v2</td>
+                <td>${labels.v2}</td>
                 <td>${v2}</td>
                 <td>
                   <span className=${`delta ${d2 < 0 ? "down" : "up"}`}>
@@ -1586,6 +1745,19 @@
       </main>
     `;
   }
+
+  const STAT_LABELS = {
+    "/stats/vip": { v1: "Packets", v2: "Bytes" },
+    "/stats/real": { v1: "Packets", v2: "Bytes" },
+    "/stats/lru": { v1: "Total packets", v2: "LRU hits" },
+    "/stats/lru/miss": { v1: "TCP SYN misses", v2: "Non-SYN misses" },
+    "/stats/lru/fallback": { v1: "Fallback LRU hits", v2: "Unused" },
+    "/stats/lru/global": { v1: "Map lookup failures", v2: "Global LRU routed" },
+    "/stats/xdp/total": { v1: "Packets", v2: "Bytes" },
+    "/stats/xdp/pass": { v1: "Packets", v2: "Bytes" },
+    "/stats/xdp/drop": { v1: "Packets", v2: "Bytes" },
+    "/stats/xdp/tx": { v1: "Packets", v2: "Bytes" },
+  };
 
   const GLOBAL_STAT_ITEMS = [
     { title: "LRU", path: "/stats/lru" },
@@ -1604,14 +1776,19 @@
     return `${sign}${value}`;
   }
 
+  function getStatLabels(path) {
+    return STAT_LABELS[path] || { v1: "v1", v2: "v2" };
+  }
+
   function StatPanel({ title, path, diff = false }) {
     const { points, error } = useStatSeries({ path });
+    const labels = useMemo(() => getStatLabels(path), [path]);
     const keys = useMemo(
       () => [
-        { label: "v1", field: "v1", color: "#2f4858", fill: "rgba(47,72,88,0.2)" },
-        { label: "v2", field: "v2", color: "#d97757", fill: "rgba(217,119,87,0.2)" },
+        { label: labels.v1, field: "v1", color: "#2f4858", fill: "rgba(47,72,88,0.2)" },
+        { label: labels.v2, field: "v2", color: "#d97757", fill: "rgba(217,119,87,0.2)" },
       ],
-      []
+      [labels]
     );
 
     return html`
@@ -1625,6 +1802,7 @@
 
   function StatSummaryCard({ title, path }) {
     const { points, error } = useStatSeries({ path });
+    const labels = useMemo(() => getStatLabels(path), [path]);
     const latest = points[points.length - 1] || {};
     const prev = points[points.length - 2] || {};
     const v1 = Number(latest.v1 ?? 0);
@@ -1640,11 +1818,11 @@
           : html`
               <div className="summary-row">
                 <div className="stat">
-                  <span className="muted">v1 absolute</span>
+                  <span className="muted">${labels.v1}</span>
                   <strong>${v1}</strong>
                 </div>
                 <div className="stat">
-                  <span className="muted">v1 delta/sec</span>
+                  <span className="muted">${labels.v1} delta/sec</span>
                   <strong className=${d1 < 0 ? "delta down" : "delta up"}>
                     ${formatDelta(d1)}
                   </strong>
@@ -1652,11 +1830,11 @@
               </div>
               <div className="summary-row">
                 <div className="stat">
-                  <span className="muted">v2 absolute</span>
+                  <span className="muted">${labels.v2}</span>
                   <strong>${v2}</strong>
                 </div>
                 <div className="stat">
-                  <span className="muted">v2 delta/sec</span>
+                  <span className="muted">${labels.v2} delta/sec</span>
                   <strong className=${d2 < 0 ? "delta down" : "delta up"}>
                     ${formatDelta(d2)}
                   </strong>
@@ -1921,17 +2099,23 @@
       setError("");
       try {
         const res = await fetch(`${api.base}/config/export`, {
+          credentials: "same-origin",
           headers: { Accept: "application/x-yaml" },
         });
         if (!res.ok) {
           let message = `HTTP ${res.status}`;
+          let code = "";
           try {
             const payload = await res.json();
             message = payload?.error?.message || message;
+            code = payload?.error?.code || "";
           } catch (err) {
             // ignore JSON parsing errors for YAML responses
           }
-          throw new Error(message);
+          if (res.status === 401 || code === "UNAUTHORIZED") {
+            api.notifyUnauthorized(message);
+          }
+          throw new ApiError(message, res.status, code);
         }
         const text = await res.text();
         if (!mountedRef.current) return;
@@ -2228,7 +2412,28 @@
   function App() {
     const [status, setStatus] = useState({ initialized: false, ready: false });
     const [toasts, setToasts] = useState([]);
+    const [authState, setAuthState] = useState({
+      checking: true,
+      required: false,
+      username: "",
+    });
     const toastTimers = useRef({});
+
+    const loadStatus = useCallback(async () => {
+      try {
+        const lbStatus = await api.get("/lb/status");
+        setStatus(lbStatus || { initialized: false, ready: false });
+        setAuthState((prev) => ({ ...prev, checking: false, required: false }));
+      } catch (err) {
+        if (err instanceof ApiError && err.unauthorized) {
+          setStatus({ initialized: false, ready: false });
+          setAuthState((prev) => ({ ...prev, checking: false, required: true }));
+          return;
+        }
+        setStatus({ initialized: false, ready: false });
+        setAuthState((prev) => ({ ...prev, checking: false }));
+      }
+    }, []);
 
     const addToast = (message, kind = "info") => {
       const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -2247,45 +2452,94 @@
       setToasts((prev) => prev.filter((toast) => toast.id !== id));
     };
 
+    const login = async (username, password) => {
+      const data = await api.login(username, password);
+      setAuthState({
+        checking: false,
+        required: false,
+        username: data?.username || username,
+      });
+      await loadStatus();
+      addToast("Signed in.", "success");
+    };
+
+    const logout = async () => {
+      try {
+        await api.logout();
+      } catch (err) {
+        addToast(err.message || "Sign out failed.", "error");
+      }
+      setStatus({ initialized: false, ready: false });
+      setAuthState({
+        checking: false,
+        required: true,
+        username: "",
+      });
+    };
+
+    useEffect(() => {
+      api.setAuthHandlers({
+        onUnauthorized: () => {
+          setAuthState((prev) => ({ ...prev, checking: false, required: true, username: "" }));
+        },
+      });
+      return () => {
+        api.setAuthHandlers({});
+      };
+    }, []);
+
     useEffect(() => {
       let mounted = true;
       const load = async () => {
-        try {
-          const lbStatus = await api.get("/lb/status");
-          if (mounted) {
-            setStatus(lbStatus || { initialized: false, ready: false });
-          }
-        } catch (err) {
-          if (mounted) {
-            setStatus({ initialized: false, ready: false });
-          }
-        }
+        if (!mounted) return;
+        await loadStatus();
       };
       load();
-      const interval = setInterval(load, 5000);
+      const interval = setInterval(() => {
+        if (!mounted || authState.required) return;
+        loadStatus();
+      }, 5000);
       return () => {
         mounted = false;
         clearInterval(interval);
+      };
+    }, [loadStatus, authState.required]);
+
+    const authValue = useMemo(
+      () => ({
+        required: authState.required,
+        username: authState.username,
+        login,
+        logout,
+      }),
+      [authState.required, authState.username]
+    );
+
+    useEffect(() => {
+      return () => {
+        Object.keys(toastTimers.current).forEach((id) => clearTimeout(toastTimers.current[id]));
       };
     }, []);
 
     return html`
       <${BrowserRouter}>
-        <${AuthGate}>
-          <${ToastContext.Provider} value=${{ addToast }}>
-            <${Header} status=${status} />
-            <${Routes}>
-              <${Route} path="/" element=${html`<${Dashboard} />`} />
-              <${Route} path="/vips/:vipId" element=${html`<${VipDetail} />`} />
-              <${Route} path="/vips/:vipId/stats" element=${html`<${VipStats} />`} />
-              <${Route} path="/target-groups" element=${html`<${TargetGroups} />`} />
-              <${Route} path="/stats/global" element=${html`<${GlobalStats} />`} />
-              <${Route} path="/stats/real" element=${html`<${RealStats} />`} />
-              <${Route} path="/config" element=${html`<${ConfigExport} />`} />
-            </${Routes}>
-            <${Toasts} toasts=${toasts} onDismiss=${dismissToast} />
-          </${ToastContext.Provider}>
-        </${AuthGate}>
+        <${AuthContext.Provider} value=${authValue}>
+          <${AuthGate} checking=${authState.checking} required=${authState.required}>
+            <${ToastContext.Provider} value=${{ addToast }}>
+              <${Header} status=${status} />
+              <${Routes}>
+                <${Route} path="/" element=${html`<${Dashboard} />`} />
+                <${Route} path="/vips/:vipId" element=${html`<${VipDetail} />`} />
+                <${Route} path="/vips/:vipId/stats" element=${html`<${VipStats} />`} />
+                <${Route} path="/target-groups" element=${html`<${TargetGroups} />`} />
+                <${Route} path="/stats/global" element=${html`<${GlobalStats} />`} />
+                <${Route} path="/stats/real" element=${html`<${RealStats} />`} />
+                <${Route} path="/config" element=${html`<${ConfigExport} />`} />
+              </${Routes}>
+              <${Toasts} toasts=${toasts} onDismiss=${dismissToast} />
+            </${ToastContext.Provider}>
+          </${AuthGate}>
+        </${AuthContext.Provider}>
       </${BrowserRouter}>
     `;
   }

@@ -47,6 +47,22 @@ main {
   gap: 20px;
 }
 
+.auth-main {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: min(420px, 100%);
+  background: var(--panel);
+  border: 1px solid #ece6dc;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 8px 18px rgba(47, 41, 34, 0.08);
+}
+
 .card {
   background: var(--panel);
   border: 1px solid #ece6dc;
@@ -302,43 +318,6 @@ main {
   flex-direction: row;
   align-items: center;
   gap: 8px;
-}
-
-.flag-selector {
-  display: grid;
-  gap: 6px;
-}
-
-.flag-options {
-  display: grid;
-  gap: 6px;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-}
-
-.flag-option {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  border-radius: 8px;
-  border: 1px solid #e4d8ca;
-  background: #fffaf3;
-  font-size: 13px;
-  color: var(--ink);
-}
-
-.flag-option input {
-  margin: 0;
-}
-
-.flag-value,
-.flag-summary {
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.flag-value {
-  margin-left: auto;
 }
 
 .inline-input {

@@ -47,6 +47,22 @@ main {
   gap: 20px;
 }
 
+.auth-main {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: min(420px, 100%);
+  background: var(--panel);
+  border: 1px solid #ece6dc;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 8px 18px rgba(47, 41, 34, 0.08);
+}
+
 .card {
   background: var(--panel);
   border: 1px solid #ece6dc;
