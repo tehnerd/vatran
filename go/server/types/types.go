@@ -15,6 +15,16 @@ type TLSConfigInfo struct {
 	ClientCAFile string
 }
 
+// AuthConfigInfo provides authentication configuration information for export.
+type AuthConfigInfo struct {
+	Enabled        bool
+	DatabasePath   string
+	AllowLocalhost bool
+	SessionTimeout int
+	BcryptCost     int
+	ExemptPaths    []string
+}
+
 // ServerConfigProvider provides server configuration for handlers.
 // This interface breaks the import cycle between server and handlers packages.
 type ServerConfigProvider interface {
@@ -30,6 +40,7 @@ type ServerConfigProvider interface {
 	GetStaticDir() string
 	GetBPFProgDir() string
 	GetTLS() *TLSConfigInfo
+	GetAuthInfo() *AuthConfigInfo
 }
 
 // ConfigExporter exports configuration to YAML format.

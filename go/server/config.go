@@ -191,6 +191,21 @@ func (c *Config) GetTLS() *types.TLSConfigInfo {
 	}
 }
 
+// GetAuthInfo returns the authentication configuration info for export.
+func (c *Config) GetAuthInfo() *types.AuthConfigInfo {
+	if c.Auth == nil || !c.Auth.Enabled {
+		return nil
+	}
+	return &types.AuthConfigInfo{
+		Enabled:        c.Auth.Enabled,
+		DatabasePath:   c.Auth.DatabasePath,
+		AllowLocalhost: c.Auth.AllowLocalhost,
+		SessionTimeout: c.Auth.SessionTimeout,
+		BcryptCost:     c.Auth.BcryptCost,
+		ExemptPaths:    c.Auth.ExemptPaths,
+	}
+}
+
 // FullConfig is the top-level configuration structure for YAML config files.
 // It contains server settings, load balancer configuration, target groups, and VIPs.
 type FullConfig struct {
@@ -782,6 +797,18 @@ func buildFullConfigFromRuntime(serverCfg *Config, katranCfg *KatranConfigExport
 	fc.Server.EnableLogging = &enableLogging
 	enableRecovery := serverCfg.EnableRecovery
 	fc.Server.EnableRecovery = &enableRecovery
+
+	// Build auth config if present
+	if serverCfg.Auth != nil && serverCfg.Auth.Enabled {
+		fc.Server.Auth = &AuthYAMLConfig{
+			Enabled:        serverCfg.Auth.Enabled,
+			DatabasePath:   serverCfg.Auth.DatabasePath,
+			AllowLocalhost: serverCfg.Auth.AllowLocalhost,
+			SessionTimeout: serverCfg.Auth.SessionTimeout,
+			BcryptCost:     serverCfg.Auth.BcryptCost,
+			ExemptPaths:    serverCfg.Auth.ExemptPaths,
+		}
+	}
 
 	// Build TLS config if present
 	if serverCfg.TLS != nil {

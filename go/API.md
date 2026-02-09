@@ -1635,6 +1635,14 @@ server:
   enable_recovery: true
   static_dir: ""
   bpf_prog_dir: "/path/to/bpf"
+  auth:
+    enabled: true
+    database_path: "/var/lib/katran/auth.db"
+    allow_localhost: false
+    session_timeout: 24
+    bcrypt_cost: 12
+    exempt_paths:
+      - /metrics
 
 lb:
   interfaces:
@@ -1726,7 +1734,15 @@ Export the current running configuration as JSON. Same data as the YAML export b
       "enable_logging": true,
       "enable_recovery": true,
       "static_dir": "",
-      "bpf_prog_dir": "/path/to/bpf"
+      "bpf_prog_dir": "/path/to/bpf",
+      "auth": {
+        "enabled": true,
+        "database_path": "/var/lib/katran/auth.db",
+        "allow_localhost": false,
+        "session_timeout": 24,
+        "bcrypt_cost": 12,
+        "exempt_paths": ["/metrics"]
+      }
     },
     "lb": {
       "interfaces": {

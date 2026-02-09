@@ -299,6 +299,18 @@ func (h *ConfigHandler) buildServerConfigResponse() ServerConfigExportResponse {
 		}
 	}
 
+	authInfo := h.serverCfg.GetAuthInfo()
+	if authInfo != nil {
+		resp.Auth = &AuthConfigExportResponse{
+			Enabled:        authInfo.Enabled,
+			DatabasePath:   authInfo.DatabasePath,
+			AllowLocalhost: authInfo.AllowLocalhost,
+			SessionTimeout: authInfo.SessionTimeout,
+			BcryptCost:     authInfo.BcryptCost,
+			ExemptPaths:    authInfo.ExemptPaths,
+		}
+	}
+
 	return resp
 }
 
@@ -396,18 +408,29 @@ type ConfigExportResponse struct {
 
 // ServerConfigExportResponse contains server config for export.
 type ServerConfigExportResponse struct {
-	Host           string                   `json:"host"`
-	Port           int                      `json:"port"`
-	TLS            *TLSConfigExportResponse `json:"tls,omitempty"`
-	ReadTimeout    int                      `json:"read_timeout"`
-	WriteTimeout   int                      `json:"write_timeout"`
-	IdleTimeout    int                      `json:"idle_timeout"`
-	EnableCORS     bool                     `json:"enable_cors"`
-	AllowedOrigins []string                 `json:"allowed_origins"`
-	EnableLogging  bool                     `json:"enable_logging"`
-	EnableRecovery bool                     `json:"enable_recovery"`
-	StaticDir      string                   `json:"static_dir"`
-	BPFProgDir     string                   `json:"bpf_prog_dir"`
+	Host           string                    `json:"host"`
+	Port           int                       `json:"port"`
+	TLS            *TLSConfigExportResponse  `json:"tls,omitempty"`
+	Auth           *AuthConfigExportResponse `json:"auth,omitempty"`
+	ReadTimeout    int                       `json:"read_timeout"`
+	WriteTimeout   int                       `json:"write_timeout"`
+	IdleTimeout    int                       `json:"idle_timeout"`
+	EnableCORS     bool                      `json:"enable_cors"`
+	AllowedOrigins []string                  `json:"allowed_origins"`
+	EnableLogging  bool                      `json:"enable_logging"`
+	EnableRecovery bool                      `json:"enable_recovery"`
+	StaticDir      string                    `json:"static_dir"`
+	BPFProgDir     string                    `json:"bpf_prog_dir"`
+}
+
+// AuthConfigExportResponse contains authentication config for export.
+type AuthConfigExportResponse struct {
+	Enabled        bool     `json:"enabled"`
+	DatabasePath   string   `json:"database_path"`
+	AllowLocalhost bool     `json:"allow_localhost"`
+	SessionTimeout int      `json:"session_timeout"`
+	BcryptCost     int      `json:"bcrypt_cost"`
+	ExemptPaths    []string `json:"exempt_paths,omitempty"`
 }
 
 // TLSConfigExportResponse contains TLS config for export.
