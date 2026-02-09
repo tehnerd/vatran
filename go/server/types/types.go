@@ -97,8 +97,9 @@ type KatranConfigExport struct {
 	EnableCIDV3            bool
 	MemlockUnlimited       bool
 	CleanupOnShutdown      bool
-	Testing                bool
-	HashFunc               int
+	Testing               bool
+	HashFunc              int
+	HealthcheckerEndpoint string
 }
 
 // NumberToProto converts an IP protocol number to a string.

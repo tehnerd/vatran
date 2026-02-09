@@ -390,6 +390,8 @@ type FeaturesConfig struct {
 	CleanupOnShutdown *bool `yaml:"cleanup_on_shutdown,omitempty"`
 	// Testing enables testing mode.
 	Testing bool `yaml:"testing"`
+	// HealthcheckerEndpoint is the URL of the healthchecker service API endpoint.
+	HealthcheckerEndpoint string `yaml:"healthchecker_endpoint"`
 }
 
 // BackendConfig is an alias to types.BackendConfig for convenience.
@@ -689,6 +691,7 @@ func (lc *LBConfig) ToCreateLBRequest(bpfProgDir string) map[string]interface{} 
 		result["cleanup_on_shutdown"] = *lc.Features.CleanupOnShutdown
 	}
 	result["testing"] = lc.Features.Testing
+	result["healthchecker_endpoint"] = lc.Features.HealthcheckerEndpoint
 
 	// Hash function
 	result["hash_function"] = lc.HashFunction
@@ -850,13 +853,14 @@ func buildFullConfigFromRuntime(serverCfg *Config, katranCfg *KatranConfigExport
 				SrcV6: katranCfg.KatranSrcV6,
 			},
 			Features: FeaturesConfig{
-				EnableHealthcheck:  &enableHC,
-				TunnelBasedHCEncap: &tunnelBasedHCEncap,
-				FlowDebug:          katranCfg.FlowDebug,
-				EnableCIDV3:        katranCfg.EnableCIDV3,
-				MemlockUnlimited:   &memlockUnlimited,
-				CleanupOnShutdown:  &cleanupOnShutdown,
-				Testing:            katranCfg.Testing,
+				EnableHealthcheck:     &enableHC,
+				TunnelBasedHCEncap:    &tunnelBasedHCEncap,
+				FlowDebug:             katranCfg.FlowDebug,
+				EnableCIDV3:           katranCfg.EnableCIDV3,
+				MemlockUnlimited:      &memlockUnlimited,
+				CleanupOnShutdown:     &cleanupOnShutdown,
+				Testing:               katranCfg.Testing,
+				HealthcheckerEndpoint: katranCfg.HealthcheckerEndpoint,
 			},
 			HashFunction: IntToHashFunction(katranCfg.HashFunc),
 		}
