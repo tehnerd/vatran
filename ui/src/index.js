@@ -630,16 +630,29 @@
         const list = await api.get("/vips");
         const vipsWithFlags = await Promise.all(
           (list || []).map(async (vip) => {
+            let flags = null;
+            let healthy = false;
             try {
-              const data = await api.get("/vips/flags", {
+              const flagData = await api.get("/vips/flags", {
                 address: vip.address,
                 port: vip.port,
                 proto: vip.proto,
               });
-              return { ...vip, flags: data?.flags ?? 0 };
+              flags = flagData?.flags ?? 0;
             } catch (err) {
-              return { ...vip, flags: null };
+              flags = null;
             }
+            try {
+              const reals = await api.get("/vips/reals", {
+                address: vip.address,
+                port: vip.port,
+                proto: vip.proto,
+              });
+              healthy = Array.isArray(reals) && reals.some((real) => Boolean(real?.healthy));
+            } catch (err) {
+              healthy = false;
+            }
+            return { ...vip, flags, healthy };
           })
         );
         setStatus(lbStatus || { initialized: false, ready: false });
@@ -994,7 +1007,8 @@
                   ${vips.map(
                     (vip) => html`
                       <div className="card">
-                        <div style=${{ fontWeight: 600 }}>
+                        <div className="row" style=${{ fontWeight: 600, gap: 8 }}>
+                          <span className=${`dot ${vip.healthy ? "ok" : "bad"}`}></span>
                           ${vip.address}:${vip.port} / ${vip.proto}
                         </div>
                         <div className="muted" style=${{ marginTop: 6 }}>
