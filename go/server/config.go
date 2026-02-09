@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/tehnerd/vatran/go/server/middleware"
 	"github.com/tehnerd/vatran/go/server/types"
 	"gopkg.in/yaml.v3"
 )
@@ -82,6 +83,9 @@ type Config struct {
 	// BPFProgDir is the base directory for BPF program files.
 	// BalancerProgPath and HealthcheckingProgPath in requests are relative to this directory.
 	BPFProgDir string
+	// Authenticator is the authenticator to use for the server.
+	// If nil, NoOpAuthenticator is used (all requests allowed).
+	Authenticator middleware.Authenticator
 }
 
 // DefaultConfig returns a new Config with default values.

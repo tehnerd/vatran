@@ -43,10 +43,15 @@ func New(config *Config) *Server {
 
 	mux := http.NewServeMux()
 
+	authenticator := config.Authenticator
+	if authenticator == nil {
+		authenticator = middleware.NewNoOpAuthenticator()
+	}
+
 	return &Server{
 		config:        config,
 		mux:           mux,
-		authenticator: middleware.NewNoOpAuthenticator(),
+		authenticator: authenticator,
 	}
 }
 
@@ -424,8 +429,14 @@ func (s *Server) buildTLSConfig() (*tls.Config, error) {
 	return tlsConfig, nil
 }
 
-// initializeAuth initializes the authentication system if enabled.
+// initializeAuth initializes the authentication system if enabled in config.
+// If Config.Authenticator was already set (e.g. programmatically), this is a no-op.
 func (s *Server) initializeAuth() error {
+	// Config.Authenticator was set explicitly — nothing to do
+	if s.config.Authenticator != nil {
+		return nil
+	}
+
 	if s.config.Auth == nil || !s.config.Auth.Enabled {
 		// Auth not enabled, keep using the default NoOpAuthenticator
 		return nil
@@ -449,8 +460,9 @@ func (s *Server) initializeAuth() error {
 		s.config.IsTLS(),
 	)
 
-	// Set as the server's authenticator
+	// Wire authenticator into both server and config
 	s.authenticator = s.basicAuth
+	s.config.Authenticator = s.basicAuth
 
 	// Create auth handler for login/logout routes
 	s.authHandler = handlers.NewAuthHandler(s.basicAuth)
