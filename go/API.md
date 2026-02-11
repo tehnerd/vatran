@@ -42,6 +42,7 @@ All responses follow a standard format:
 | `INTERNAL_ERROR` | 500 | An internal server error occurred |
 | `LB_NOT_INITIALIZED` | 503 | The load balancer is not initialized |
 | `UNAUTHORIZED` | 401 | The request lacks valid authentication |
+| `HC_SERVICE_UNAVAILABLE` | 502 | The healthcheck service is unreachable |
 
 ---
 
@@ -1285,6 +1286,220 @@ Delete a healthcheck key.
   "success": true
 }
 ```
+
+---
+
+## VIP Healthcheck Configuration
+
+These endpoints manage per-VIP healthcheck configuration. When a healthcheck config is set for a VIP, the server registers the VIP, its reals, and the healthcheck config with the external healthcheck service. The server then periodically polls the healthcheck service for real health states.
+
+### Healthcheck Config Object
+
+The healthcheck config object is shared across all endpoints in this section:
+
+```json
+{
+  "type": "http",
+  "port": 8080,
+  "http": {
+    "path": "/healthz",
+    "expected_status": 200,
+    "host": "example.com"
+  },
+  "interval_ms": 5000,
+  "timeout_ms": 2000,
+  "healthy_threshold": 3,
+  "unhealthy_threshold": 3
+}
+```
+
+**Healthcheck types:**
+
+| Type | Description | Sub-object |
+|------|-------------|------------|
+| `http` | HTTP GET check | `http`: `path` (required), `expected_status` (default 200), `host` (optional) |
+| `https` | HTTPS GET check | `https`: same as `http` + `skip_tls_verify` (default false) |
+| `tcp` | TCP connect check | None |
+| `dummy` | Always healthy, no checking | None |
+
+**Common fields:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `port` | int | VIP port | Port to check on each real server |
+| `interval_ms` | int | 5000 | Check interval in milliseconds. Ignored for `dummy` |
+| `timeout_ms` | int | 2000 | Timeout in milliseconds. Must be less than `interval_ms`. Ignored for `dummy` |
+| `healthy_threshold` | int | 3 | Consecutive successful checks before marking a real as healthy. Ignored for `dummy` |
+| `unhealthy_threshold` | int | 3 | Consecutive failed checks before marking a real as unhealthy. Ignored for `dummy` |
+
+**Constraints:**
+- Non-dummy types require `healthchecker_endpoint` to be configured in the server config, otherwise `FEATURE_DISABLED` is returned.
+- The `dummy` type works without a healthcheck service and marks all reals as healthy immediately.
+- Setting a healthcheck config registers the VIP and its reals with the healthcheck service. Deleting deregisters them.
+
+### PUT /api/v1/vips/healthcheck
+
+Set or update the healthcheck configuration for a VIP.
+
+**Request Body:**
+```json
+{
+  "vip": {
+    "address": "10.0.0.1",
+    "port": 80,
+    "proto": 6
+  },
+  "healthcheck": {
+    "type": "http",
+    "http": {
+      "path": "/healthz",
+      "expected_status": 200
+    },
+    "interval_ms": 5000,
+    "timeout_ms": 2000,
+    "healthy_threshold": 3,
+    "unhealthy_threshold": 3
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "success": true
+}
+```
+
+**Errors:**
+- `NOT_FOUND` — VIP does not exist
+- `INVALID_REQUEST` — Invalid healthcheck config (e.g., `timeout_ms` >= `interval_ms`, missing required sub-object fields)
+- `FEATURE_DISABLED` — Non-dummy type requested but `healthchecker_endpoint` is not configured
+- `HC_SERVICE_UNAVAILABLE` — Could not reach the healthcheck service to register the VIP
+
+### GET /api/v1/vips/healthcheck
+
+Get the healthcheck configuration for a VIP.
+
+**Query Parameters:**
+- address (string)
+- port (integer)
+- proto (integer)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "type": "http",
+    "port": 8080,
+    "http": {
+      "path": "/healthz",
+      "expected_status": 200,
+      "host": "example.com"
+    },
+    "interval_ms": 5000,
+    "timeout_ms": 2000,
+    "healthy_threshold": 3,
+    "unhealthy_threshold": 3
+  }
+}
+```
+
+Returns `null` for `data` if no healthcheck is configured for the VIP.
+
+**Errors:**
+- `NOT_FOUND` — VIP does not exist
+
+### DELETE /api/v1/vips/healthcheck
+
+Remove the healthcheck configuration from a VIP. This deregisters the VIP from the healthcheck service and stops all health checks for its reals.
+
+**Request Body:**
+```json
+{
+  "address": "10.0.0.1",
+  "port": 80,
+  "proto": 6
+}
+```
+
+**Response:**
+```json
+{
+  "success": true
+}
+```
+
+**Errors:**
+- `NOT_FOUND` — VIP does not exist or has no healthcheck configured
+- `HC_SERVICE_UNAVAILABLE` — Could not reach the healthcheck service to deregister (deregistration is still applied locally)
+
+### GET /api/v1/vips/healthcheck/status
+
+Get detailed health status for all reals of a VIP, including timestamps and failure counts from the healthcheck service.
+
+**Query Parameters:**
+- address (string)
+- port (integer)
+- proto (integer)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "vip": {
+      "address": "10.0.0.1",
+      "port": 80,
+      "proto": 6
+    },
+    "reals": [
+      {
+        "address": "192.168.1.1",
+        "healthy": true,
+        "last_check_time": "2025-01-15T10:30:00Z",
+        "last_status_change": "2025-01-15T09:00:00Z",
+        "consecutive_failures": 0
+      },
+      {
+        "address": "192.168.1.2",
+        "healthy": false,
+        "last_check_time": "2025-01-15T10:30:00Z",
+        "last_status_change": "2025-01-15T10:25:00Z",
+        "consecutive_failures": 3
+      }
+    ]
+  }
+}
+```
+
+**Errors:**
+- `NOT_FOUND` — VIP does not exist or has no healthcheck configured
+- `HC_SERVICE_UNAVAILABLE` — Could not reach the healthcheck service
+
+### YAML Configuration Extension
+
+Healthcheck configuration can be specified per VIP in the YAML config file using the optional `healthcheck` block:
+
+```yaml
+vips:
+  - address: "192.168.1.100"
+    port: 80
+    proto: "tcp"
+    target_group: web-servers
+    healthcheck:
+      type: "http"
+      port: 8080
+      http:
+        path: "/healthz"
+        expected_status: 200
+      interval_ms: 5000
+      timeout_ms: 2000
+      healthy_threshold: 3
+      unhealthy_threshold: 3
+```
+
+When loading from config, each VIP with a `healthcheck` block will be registered with the healthcheck service at startup. The `dummy` type can be used in config to mark all reals as healthy without requiring a healthcheck service.
 
 ---
 
