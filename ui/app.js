@@ -374,6 +374,66 @@
     return { address, port, proto };
   }
 
+  function defaultHealthcheckForm() {
+    return {
+      type: "dummy",
+      port: "",
+      interval_ms: 5000,
+      timeout_ms: 2000,
+      healthy_threshold: 3,
+      unhealthy_threshold: 3,
+      http_path: "/healthz",
+      http_expected_status: 200,
+      http_host: "",
+      https_path: "/healthz",
+      https_expected_status: 200,
+      https_host: "",
+      https_skip_tls_verify: false,
+    };
+  }
+
+  function healthcheckConfigToForm(cfg) {
+    if (!cfg || typeof cfg !== "object") {
+      return defaultHealthcheckForm();
+    }
+    const base = defaultHealthcheckForm();
+    return {
+      ...base,
+      type: cfg.type || base.type,
+      port: Number.isFinite(Number(cfg.port)) && Number(cfg.port) > 0 ? String(cfg.port) : "",
+      interval_ms:
+        Number.isFinite(Number(cfg.interval_ms)) && Number(cfg.interval_ms) > 0
+          ? Number(cfg.interval_ms)
+          : base.interval_ms,
+      timeout_ms:
+        Number.isFinite(Number(cfg.timeout_ms)) && Number(cfg.timeout_ms) > 0
+          ? Number(cfg.timeout_ms)
+          : base.timeout_ms,
+      healthy_threshold:
+        Number.isFinite(Number(cfg.healthy_threshold)) && Number(cfg.healthy_threshold) > 0
+          ? Number(cfg.healthy_threshold)
+          : base.healthy_threshold,
+      unhealthy_threshold:
+        Number.isFinite(Number(cfg.unhealthy_threshold)) && Number(cfg.unhealthy_threshold) > 0
+          ? Number(cfg.unhealthy_threshold)
+          : base.unhealthy_threshold,
+      http_path: cfg.http?.path || base.http_path,
+      http_expected_status:
+        Number.isFinite(Number(cfg.http?.expected_status)) && Number(cfg.http?.expected_status) > 0
+          ? Number(cfg.http.expected_status)
+          : base.http_expected_status,
+      http_host: cfg.http?.host || "",
+      https_path: cfg.https?.path || base.https_path,
+      https_expected_status:
+        Number.isFinite(Number(cfg.https?.expected_status)) &&
+        Number(cfg.https?.expected_status) > 0
+          ? Number(cfg.https.expected_status)
+          : base.https_expected_status,
+      https_host: cfg.https?.host || "",
+      https_skip_tls_verify: Boolean(cfg.https?.skip_tls_verify),
+    };
+  }
+
   function usePolling(fetcher, intervalMs, deps = []) {
     const [data, setData] = useState(null);
     const [error, setError] = useState("");
@@ -1218,6 +1278,12 @@
     const [targetGroupBusy, setTargetGroupBusy] = useState(false);
     const [saveGroupName, setSaveGroupName] = useState("");
     const [groupDiff, setGroupDiff] = useState({ add: 0, update: 0, remove: 0 });
+    const [healthcheckForm, setHealthcheckForm] = useState(() => defaultHealthcheckForm());
+    const [healthcheckConfigured, setHealthcheckConfigured] = useState(false);
+    const [healthcheckLoading, setHealthcheckLoading] = useState(true);
+    const [healthcheckError, setHealthcheckError] = useState("");
+    const [healthcheckSaving, setHealthcheckSaving] = useState(false);
+    const [healthcheckDeleting, setHealthcheckDeleting] = useState(false);
 
     const loadReals = async () => {
       try {
@@ -1246,9 +1312,32 @@
       }
     };
 
+    const loadHealthcheck = async () => {
+      setHealthcheckLoading(true);
+      try {
+        const data = await api.get("/vips/healthcheck", vip);
+        if (data) {
+          setHealthcheckConfigured(true);
+          setHealthcheckForm(healthcheckConfigToForm(data));
+        } else {
+          setHealthcheckConfigured(false);
+          setHealthcheckForm(defaultHealthcheckForm());
+        }
+        setHealthcheckError("");
+      } catch (err) {
+        setHealthcheckError(err.message || "request failed");
+      } finally {
+        setHealthcheckLoading(false);
+      }
+    };
+
     useEffect(() => {
+      setHealthcheckConfigured(false);
+      setHealthcheckForm(defaultHealthcheckForm());
+      setHealthcheckError("");
       loadReals();
       loadFlags();
+      loadHealthcheck();
     }, [params.vipId]);
 
     useEffect(() => {
@@ -1455,6 +1544,130 @@
       }
     };
 
+    const submitHealthcheck = async (event) => {
+      event.preventDefault();
+
+      const type = String(healthcheckForm.type || "").trim().toLowerCase();
+      if (!["dummy", "tcp", "http", "https"].includes(type)) {
+        setHealthcheckError("Invalid healthcheck type.");
+        return;
+      }
+
+      const buildPositiveInt = (value, label) => {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed <= 0) {
+          throw new Error(`${label} must be a positive integer.`);
+        }
+        return parsed;
+      };
+
+      const payload = { type };
+
+      try {
+        const rawPort = String(healthcheckForm.port ?? "").trim();
+        if (rawPort) {
+          const parsedPort = Number(rawPort);
+          if (
+            !Number.isFinite(parsedPort) ||
+            !Number.isInteger(parsedPort) ||
+            parsedPort < 0 ||
+            parsedPort > 65535
+          ) {
+            throw new Error("Port must be an integer between 0 and 65535.");
+          }
+          payload.port = parsedPort;
+        }
+
+        if (type !== "dummy") {
+          payload.interval_ms = buildPositiveInt(healthcheckForm.interval_ms, "Interval");
+          payload.timeout_ms = buildPositiveInt(healthcheckForm.timeout_ms, "Timeout");
+          payload.healthy_threshold = buildPositiveInt(
+            healthcheckForm.healthy_threshold,
+            "Healthy threshold"
+          );
+          payload.unhealthy_threshold = buildPositiveInt(
+            healthcheckForm.unhealthy_threshold,
+            "Unhealthy threshold"
+          );
+          if (payload.timeout_ms >= payload.interval_ms) {
+            throw new Error("Timeout must be lower than interval.");
+          }
+        }
+
+        if (type === "http") {
+          const path = String(healthcheckForm.http_path || "").trim();
+          if (!path) {
+            throw new Error("HTTP path is required.");
+          }
+          payload.http = {
+            path,
+            expected_status: buildPositiveInt(
+              healthcheckForm.http_expected_status,
+              "HTTP expected status"
+            ),
+          };
+          const host = String(healthcheckForm.http_host || "").trim();
+          if (host) {
+            payload.http.host = host;
+          }
+        }
+
+        if (type === "https") {
+          const path = String(healthcheckForm.https_path || "").trim();
+          if (!path) {
+            throw new Error("HTTPS path is required.");
+          }
+          payload.https = {
+            path,
+            expected_status: buildPositiveInt(
+              healthcheckForm.https_expected_status,
+              "HTTPS expected status"
+            ),
+            skip_tls_verify: Boolean(healthcheckForm.https_skip_tls_verify),
+          };
+          const host = String(healthcheckForm.https_host || "").trim();
+          if (host) {
+            payload.https.host = host;
+          }
+        }
+      } catch (err) {
+        setHealthcheckError(err.message || "Invalid healthcheck configuration.");
+        return;
+      }
+
+      setHealthcheckSaving(true);
+      try {
+        await api.put("/vips/healthcheck", {
+          vip,
+          healthcheck: payload,
+        });
+        await loadHealthcheck();
+        addToast(
+          healthcheckConfigured ? "Healthcheck updated." : "Healthcheck configured.",
+          "success"
+        );
+      } catch (err) {
+        setHealthcheckError(err.message || "request failed");
+        addToast(err.message || "Healthcheck update failed.", "error");
+      } finally {
+        setHealthcheckSaving(false);
+      }
+    };
+
+    const deleteHealthcheck = async () => {
+      setHealthcheckDeleting(true);
+      try {
+        await api.del("/vips/healthcheck", vip);
+        await loadHealthcheck();
+        addToast("Healthcheck removed.", "success");
+      } catch (err) {
+        setHealthcheckError(err.message || "request failed");
+        addToast(err.message || "Healthcheck delete failed.", "error");
+      } finally {
+        setHealthcheckDeleting(false);
+      }
+    };
+
     return html`
       <main>
         <section className="card">
@@ -1576,6 +1789,233 @@
               <button className="btn" type="submit">Apply hash</button>
             </form>
           </div>
+        </section>
+        <section className="card">
+          <div className="section-header">
+            <div>
+              <h3>VIP healthcheck (optional)</h3>
+              <p className="muted">
+                ${healthcheckConfigured
+                  ? "A healthcheck is currently configured for this VIP."
+                  : "No healthcheck is configured for this VIP."}
+              </p>
+            </div>
+            <div className="row">
+              <button className="btn ghost" type="button" onClick=${loadHealthcheck}>
+                Refresh healthcheck
+              </button>
+              ${healthcheckConfigured
+                ? html`
+                    <button
+                      className="btn danger"
+                      type="button"
+                      onClick=${deleteHealthcheck}
+                      disabled=${healthcheckDeleting}
+                    >
+                      ${healthcheckDeleting ? "Removing..." : "Remove healthcheck"}
+                    </button>
+                  `
+                : null}
+            </div>
+          </div>
+          ${healthcheckError ? html`<p className="error">${healthcheckError}</p>` : null}
+          ${healthcheckLoading
+            ? html`<p className="muted">Loading healthcheck configuration…</p>`
+            : null}
+          <form className="form" onSubmit=${submitHealthcheck}>
+            <div className="form-row">
+              <label className="field">
+                <span>Type</span>
+                <select
+                  value=${healthcheckForm.type}
+                  onChange=${(e) =>
+                    setHealthcheckForm({ ...healthcheckForm, type: e.target.value })}
+                >
+                  <option value="dummy">dummy</option>
+                  <option value="tcp">tcp</option>
+                  <option value="http">http</option>
+                  <option value="https">https</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>Port (optional)</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="65535"
+                  value=${healthcheckForm.port}
+                  onInput=${(e) =>
+                    setHealthcheckForm({ ...healthcheckForm, port: e.target.value })}
+                  placeholder=${`VIP port (${vip.port})`}
+                />
+              </label>
+            </div>
+
+            ${healthcheckForm.type !== "dummy"
+              ? html`
+                  <div className="form-row">
+                    <label className="field">
+                      <span>Interval (ms)</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value=${healthcheckForm.interval_ms}
+                        onInput=${(e) =>
+                          setHealthcheckForm({
+                            ...healthcheckForm,
+                            interval_ms: e.target.value,
+                          })}
+                        required
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Timeout (ms)</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value=${healthcheckForm.timeout_ms}
+                        onInput=${(e) =>
+                          setHealthcheckForm({
+                            ...healthcheckForm,
+                            timeout_ms: e.target.value,
+                          })}
+                        required
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Healthy threshold</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value=${healthcheckForm.healthy_threshold}
+                        onInput=${(e) =>
+                          setHealthcheckForm({
+                            ...healthcheckForm,
+                            healthy_threshold: e.target.value,
+                          })}
+                        required
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Unhealthy threshold</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value=${healthcheckForm.unhealthy_threshold}
+                        onInput=${(e) =>
+                          setHealthcheckForm({
+                            ...healthcheckForm,
+                            unhealthy_threshold: e.target.value,
+                          })}
+                        required
+                      />
+                    </label>
+                  </div>
+                `
+              : null}
+
+            ${healthcheckForm.type === "http"
+              ? html`
+                  <div className="form-row">
+                    <label className="field">
+                      <span>HTTP path</span>
+                      <input
+                        value=${healthcheckForm.http_path}
+                        onInput=${(e) =>
+                          setHealthcheckForm({ ...healthcheckForm, http_path: e.target.value })}
+                        placeholder="/healthz"
+                        required
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Expected status</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value=${healthcheckForm.http_expected_status}
+                        onInput=${(e) =>
+                          setHealthcheckForm({
+                            ...healthcheckForm,
+                            http_expected_status: e.target.value,
+                          })}
+                        required
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Host (optional)</span>
+                      <input
+                        value=${healthcheckForm.http_host}
+                        onInput=${(e) =>
+                          setHealthcheckForm({ ...healthcheckForm, http_host: e.target.value })}
+                        placeholder="example.com"
+                      />
+                    </label>
+                  </div>
+                `
+              : null}
+
+            ${healthcheckForm.type === "https"
+              ? html`
+                  <div className="form-row">
+                    <label className="field">
+                      <span>HTTPS path</span>
+                      <input
+                        value=${healthcheckForm.https_path}
+                        onInput=${(e) =>
+                          setHealthcheckForm({ ...healthcheckForm, https_path: e.target.value })}
+                        placeholder="/healthz"
+                        required
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Expected status</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value=${healthcheckForm.https_expected_status}
+                        onInput=${(e) =>
+                          setHealthcheckForm({
+                            ...healthcheckForm,
+                            https_expected_status: e.target.value,
+                          })}
+                        required
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Host (optional)</span>
+                      <input
+                        value=${healthcheckForm.https_host}
+                        onInput=${(e) =>
+                          setHealthcheckForm({ ...healthcheckForm, https_host: e.target.value })}
+                        placeholder="example.com"
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Skip TLS verify</span>
+                      <input
+                        type="checkbox"
+                        checked=${Boolean(healthcheckForm.https_skip_tls_verify)}
+                        onChange=${(e) =>
+                          setHealthcheckForm({
+                            ...healthcheckForm,
+                            https_skip_tls_verify: e.target.checked,
+                          })}
+                      />
+                    </label>
+                  </div>
+                `
+              : null}
+
+            <div className="row">
+              <button className="btn" type="submit" disabled=${healthcheckSaving}>
+                ${healthcheckSaving
+                  ? "Saving..."
+                  : healthcheckConfigured
+                    ? "Update healthcheck"
+                    : "Set healthcheck"}
+              </button>
+            </div>
+          </form>
         </section>
         <section className="card">
           <h3>Add real</h3>
