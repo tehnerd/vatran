@@ -207,4 +207,4 @@ go/cmd/hc-service/
 
 ## API Reference
 
-See [HC_API.md](HC_API.md) for the full REST API specification.
+See [HC_API.md](go/HC_API.md) for the full REST API specification.
