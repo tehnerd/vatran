@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/tehnerd/vatran/go/katran"
 	"github.com/tehnerd/vatran/go/server/lb"
 	"github.com/tehnerd/vatran/go/server/models"
+	"github.com/tehnerd/vatran/go/server/types"
 )
 
 // VIPHandler handles VIP management operations.
@@ -118,9 +121,21 @@ func (h *VIPHandler) handleDelVIP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Deregister from HC service if VIP has non-dummy HC config (fire-and-forget)
+	vipKey := lb.VIPKeyString(req.Address, req.Port, req.Proto)
+	if state, ok := h.manager.GetState(); ok {
+		if hcCfg, hasHC := state.GetHCConfig(vipKey); hasHC && hcCfg.Type != "dummy" {
+			if hcClient := h.manager.GetHCClient(); hcClient != nil {
+				hcVIP := types.HCVIPKey{Address: req.Address, Port: req.Port, Proto: req.Proto}
+				if err := hcClient.DeregisterVIP(context.Background(), hcVIP); err != nil {
+					log.Printf("HC deregister: failed to deregister VIP %s from HC service: %v", vipKey, err)
+				}
+			}
+		}
+	}
+
 	// Clean state tracking before deleting VIP (katran's DelVIP handles real cleanup internally)
 	if state, ok := h.manager.GetState(); ok {
-		vipKey := lb.VIPKeyString(req.Address, req.Port, req.Proto)
 		state.CleanVIP(vipKey)
 	}
 

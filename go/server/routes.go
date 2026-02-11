@@ -59,6 +59,11 @@ func RegisterRoutes(mux *http.ServeMux, config *Config, authHandler *handlers.Au
 	mux.HandleFunc(APIBasePath+"/vips/flags", vipHandler.HandleVIPFlags)
 	mux.HandleFunc(APIBasePath+"/vips/hash-function", vipHandler.HandleHashFunction)
 
+	// VIP healthcheck configuration endpoints
+	vipHealthcheckHandler := handlers.NewVIPHealthcheckHandler()
+	mux.HandleFunc(APIBasePath+"/vips/healthcheck/status", vipHealthcheckHandler.HandleVIPHealthcheckStatus)
+	mux.HandleFunc(APIBasePath+"/vips/healthcheck", vipHealthcheckHandler.HandleVIPHealthcheck)
+
 	// Real server endpoints
 	mux.HandleFunc(APIBasePath+"/vips/reals", realHandler.HandleVIPReals)
 	mux.HandleFunc(APIBasePath+"/vips/reals/batch", realHandler.HandleBatchModifyReals)

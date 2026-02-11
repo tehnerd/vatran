@@ -428,6 +428,8 @@ type VIPConfig struct {
 	TargetGroup string `yaml:"target_group"`
 	// Flags are VIP-specific flags.
 	Flags uint32 `yaml:"flags"`
+	// Healthcheck is the optional per-VIP healthcheck configuration.
+	Healthcheck *types.HealthcheckConfig `yaml:"healthcheck,omitempty"`
 }
 
 // LoadConfigFromFile loads and parses a YAML configuration file.
@@ -509,6 +511,25 @@ func (fc *FullConfig) Validate() error {
 			return fmt.Errorf("vip[%d]: duplicate VIP %s", i, key)
 		}
 		seen[key] = true
+	}
+
+	// Validate healthcheck configs
+	hasNonDummyHC := false
+	for i, vip := range fc.VIPs {
+		if vip.Healthcheck != nil {
+			vip.Healthcheck.ApplyDefaults()
+			if err := vip.Healthcheck.Validate(); err != nil {
+				return fmt.Errorf("vip[%d]: invalid healthcheck config: %w", i, err)
+			}
+			if vip.Healthcheck.Type != "dummy" {
+				hasNonDummyHC = true
+			}
+		}
+	}
+
+	// Non-dummy HC configs require healthchecker_endpoint
+	if hasNonDummyHC && fc.LB.Features.HealthcheckerEndpoint == "" {
+		return fmt.Errorf("healthchecker_endpoint is required when non-dummy healthcheck configs are defined")
 	}
 
 	return nil
@@ -925,6 +946,7 @@ func buildFullConfigFromRuntime(serverCfg *Config, katranCfg *KatranConfigExport
 			Proto:       NumberToProto(vip.Proto),
 			TargetGroup: targetGroupName,
 			Flags:       vip.Flags,
+			Healthcheck: vip.Healthcheck,
 		})
 	}
 

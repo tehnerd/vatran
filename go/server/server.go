@@ -18,6 +18,7 @@ import (
 	"github.com/tehnerd/vatran/go/server/handlers"
 	"github.com/tehnerd/vatran/go/server/lb"
 	"github.com/tehnerd/vatran/go/server/middleware"
+	"github.com/tehnerd/vatran/go/server/types"
 )
 
 // Server represents the HTTP server for the Katran API.
@@ -28,6 +29,7 @@ type Server struct {
 	authenticator middleware.Authenticator
 	basicAuth     *auth.BasicAuthenticator
 	authHandler   *handlers.AuthHandler
+	hcPoller      *lb.HCPoller
 }
 
 // New creates a new Server with the provided configuration.
@@ -148,6 +150,11 @@ func (s *Server) StartAsync() <-chan error {
 // Returns an error if shutdown fails.
 func (s *Server) Stop(ctx context.Context) error {
 	log.Println("Shutting down server...")
+
+	// Stop HC poller
+	if s.hcPoller != nil {
+		s.hcPoller.Stop()
+	}
 
 	var errs []error
 
@@ -283,6 +290,62 @@ func (s *Server) InitFromConfig(cfg *FullConfig) error {
 				log.Printf("  %d backends from target group %q (0 healthy, waiting for healthchecker)", len(backends), vipCfg.TargetGroup)
 			}
 		}
+	}
+
+	// Configure per-VIP healthchecks
+	hasNonDummyHC := false
+	hcClient := manager.GetHCClient()
+	for _, vipCfg := range cfg.VIPs {
+		if vipCfg.Healthcheck == nil {
+			continue
+		}
+		vipKey := lb.VIPKeyString(vipCfg.Address, vipCfg.Port, ProtoToNumber(vipCfg.Proto))
+		hcCfg := *vipCfg.Healthcheck
+		hcCfg.ApplyDefaults()
+		state.SetHCConfig(vipKey, &hcCfg)
+
+		if hcCfg.Type == "dummy" {
+			// Mark all reals healthy immediately
+			reals := state.GetReals(vipKey)
+			vip := katran.VIPKey{
+				Address: vipCfg.Address,
+				Port:    vipCfg.Port,
+				Proto:   ProtoToNumber(vipCfg.Proto),
+			}
+			for _, rs := range reals {
+				oldHealthy, found := state.UpdateHealth(vipKey, rs.Address, true)
+				if found && !oldHealthy {
+					real := katran.Real{
+						Address: rs.Address,
+						Weight:  rs.Weight,
+						Flags:   rs.Flags,
+					}
+					if err := lbInstance.AddRealForVIP(real, vip); err != nil {
+						log.Printf("  HC dummy: failed to add real %s for VIP %s: %v", rs.Address, vipKey, err)
+					}
+				}
+			}
+		} else {
+			hasNonDummyHC = true
+			// Register with HC service
+			if hcClient != nil {
+				hcVIP := types.HCVIPKey{
+					Address: vipCfg.Address,
+					Port:    vipCfg.Port,
+					Proto:   ProtoToNumber(vipCfg.Proto),
+				}
+				reals := state.GetReals(vipKey)
+				if err := hcClient.RegisterVIP(context.Background(), hcVIP, reals, &hcCfg); err != nil {
+					log.Printf("  Warning: failed to register VIP %s with HC service: %v", vipKey, err)
+				}
+			}
+		}
+	}
+
+	// Start background poller if any non-dummy HC configs exist
+	if hasNonDummyHC && hcClient != nil {
+		s.hcPoller = lb.NewHCPoller(manager, 5*time.Second)
+		s.hcPoller.Start()
 	}
 
 	log.Printf("Initialization complete: %d VIPs configured", len(cfg.VIPs))

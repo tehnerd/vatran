@@ -30,6 +30,8 @@ const (
 	CodeUnauthorized APIErrorCode = "UNAUTHORIZED"
 	// CodeForbidden indicates the request is not allowed.
 	CodeForbidden APIErrorCode = "FORBIDDEN"
+	// CodeHCServiceUnavailable indicates the healthcheck service is unavailable.
+	CodeHCServiceUnavailable APIErrorCode = "HC_SERVICE_UNAVAILABLE"
 )
 
 // APIError represents an error response from the API.
@@ -145,4 +147,24 @@ func NewInternalError(message string) *APIError {
 // Returns a new APIError with LB_NOT_INITIALIZED code.
 func NewLBNotInitializedError() *APIError {
 	return NewAPIError(CodeLBNotInitialized, "load balancer is not initialized")
+}
+
+// NewFeatureDisabledError creates a new feature disabled error.
+//
+// Parameters:
+//   - message: The error message.
+//
+// Returns a new APIError with FEATURE_DISABLED code.
+func NewFeatureDisabledError(message string) *APIError {
+	return NewAPIError(CodeFeatureDisabled, message)
+}
+
+// NewHCServiceUnavailableError creates a new HC service unavailable error.
+//
+// Parameters:
+//   - message: The error message.
+//
+// Returns a new APIError with HC_SERVICE_UNAVAILABLE code.
+func NewHCServiceUnavailableError(message string) *APIError {
+	return NewAPIError(CodeHCServiceUnavailable, message)
 }

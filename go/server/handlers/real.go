@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/tehnerd/vatran/go/katran"
 	"github.com/tehnerd/vatran/go/server/lb"
 	"github.com/tehnerd/vatran/go/server/models"
+	"github.com/tehnerd/vatran/go/server/types"
 )
 
 // RealHandler handles real server management operations.
@@ -152,6 +155,19 @@ func (h *RealHandler) handleAddReal(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Notify HC service if VIP has non-dummy HC config (fire-and-forget)
+	if stateOK {
+		if hcCfg, hasHC := state.GetHCConfig(vipKey); hasHC && hcCfg.Type != "dummy" {
+			if hcClient := h.manager.GetHCClient(); hcClient != nil {
+				hcVIP := types.HCVIPKey{Address: req.VIP.Address, Port: req.VIP.Port, Proto: req.VIP.Proto}
+				newReals := []lb.RealState{{Address: req.Real.Address, Weight: req.Real.Weight, Flags: req.Real.Flags}}
+				if err := hcClient.AddReals(context.Background(), hcVIP, newReals); err != nil {
+					log.Printf("HC notify: failed to add real %s to HC service for VIP %s: %v", req.Real.Address, vipKey, err)
+				}
+			}
+		}
+	}
+
 	models.WriteCreated(w, nil)
 }
 
@@ -203,6 +219,18 @@ func (h *RealHandler) handleDelReal(w http.ResponseWriter, r *http.Request) {
 		if err := lbInstance.DelRealForVIP(real, vip); err != nil {
 			models.WriteKatranError(w, err)
 			return
+		}
+	}
+
+	// Notify HC service if VIP has non-dummy HC config (fire-and-forget)
+	if stateOK {
+		if hcCfg, hasHC := state.GetHCConfig(vipKey); hasHC && hcCfg.Type != "dummy" {
+			if hcClient := h.manager.GetHCClient(); hcClient != nil {
+				hcVIP := types.HCVIPKey{Address: req.VIP.Address, Port: req.VIP.Port, Proto: req.VIP.Proto}
+				if err := hcClient.RemoveReals(context.Background(), hcVIP, []string{req.Real.Address}); err != nil {
+					log.Printf("HC notify: failed to remove real %s from HC service for VIP %s: %v", req.Real.Address, vipKey, err)
+				}
+			}
 		}
 	}
 

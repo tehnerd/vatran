@@ -235,6 +235,28 @@ type MapFDsResponse struct {
 	FDs []int `json:"fds"`
 }
 
+// VIPHealthStatusResponse represents the health status response for a VIP's reals.
+type VIPHealthStatusResponse struct {
+	// VIP identifies the virtual IP.
+	VIP VIPResponse `json:"vip"`
+	// Reals contains health status for all reals of this VIP.
+	Reals []RealHealthStatusResponse `json:"reals"`
+}
+
+// RealHealthStatusResponse represents detailed health status for a single real.
+type RealHealthStatusResponse struct {
+	// Address is the real server IP address.
+	Address string `json:"address"`
+	// Healthy indicates whether the real is healthy.
+	Healthy bool `json:"healthy"`
+	// LastCheckTime is the timestamp of the last health check.
+	LastCheckTime string `json:"last_check_time,omitempty"`
+	// LastStatusChange is the timestamp of the last status change.
+	LastStatusChange string `json:"last_status_change,omitempty"`
+	// ConsecutiveFailures is the number of consecutive failed checks.
+	ConsecutiveFailures int `json:"consecutive_failures"`
+}
+
 // WriteJSON writes a JSON response to the http.ResponseWriter.
 //
 // Parameters:

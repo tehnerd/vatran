@@ -1,5 +1,18 @@
 package models
 
+import "github.com/tehnerd/vatran/go/server/types"
+
+// HealthcheckConfig is a type alias for types.HealthcheckConfig.
+type HealthcheckConfig = types.HealthcheckConfig
+
+// SetVIPHealthcheckRequest represents a request to set healthcheck configuration for a VIP.
+type SetVIPHealthcheckRequest struct {
+	// VIP is the target VIP.
+	VIP VIPRequest `json:"vip"`
+	// Healthcheck is the healthcheck configuration.
+	Healthcheck HealthcheckConfig `json:"healthcheck"`
+}
+
 // CreateLBRequest represents a request to create a load balancer.
 type CreateLBRequest struct {
 	// MainInterface is the name of the main network interface to attach XDP program.

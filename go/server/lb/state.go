@@ -3,6 +3,8 @@ package lb
 import (
 	"fmt"
 	"sync"
+
+	"github.com/tehnerd/vatran/go/server/types"
 )
 
 // RealState represents the tracked state of a real server for a VIP.
@@ -22,6 +24,7 @@ type RealState struct {
 type VIPRealsState struct {
 	mu                    sync.RWMutex
 	vips                  map[string]map[string]*RealState // vipKey -> realAddr -> state
+	hcConfigs             map[string]*types.HealthcheckConfig // vipKey -> HC config
 	healthcheckerEndpoint string
 }
 
@@ -47,6 +50,7 @@ func VIPKeyString(address string, port uint16, proto uint8) string {
 func NewVIPRealsState(healthcheckerEndpoint string) *VIPRealsState {
 	return &VIPRealsState{
 		vips:                  make(map[string]map[string]*RealState),
+		hcConfigs:             make(map[string]*types.HealthcheckConfig),
 		healthcheckerEndpoint: healthcheckerEndpoint,
 	}
 }
@@ -95,6 +99,7 @@ func (s *VIPRealsState) CleanVIP(vipKey string) []RealState {
 		}
 	}
 	delete(s.vips, vipKey)
+	delete(s.hcConfigs, vipKey)
 	return healthy
 }
 
@@ -210,6 +215,7 @@ func (s *VIPRealsState) Clear() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.vips = make(map[string]map[string]*RealState)
+	s.hcConfigs = make(map[string]*types.HealthcheckConfig)
 }
 
 // GetHealthcheckerEndpoint returns the configured healthchecker endpoint URL.
@@ -219,4 +225,57 @@ func (s *VIPRealsState) GetHealthcheckerEndpoint() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.healthcheckerEndpoint
+}
+
+// SetHCConfig stores or updates the healthcheck configuration for a VIP.
+//
+// Parameters:
+//   - vipKey: The canonical VIP key string.
+//   - config: The healthcheck configuration to store.
+func (s *VIPRealsState) SetHCConfig(vipKey string, config *types.HealthcheckConfig) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.hcConfigs[vipKey] = config
+}
+
+// GetHCConfig retrieves the healthcheck configuration for a VIP.
+//
+// Parameters:
+//   - vipKey: The canonical VIP key string.
+//
+// Returns the healthcheck config and true if found, or nil and false if not found.
+func (s *VIPRealsState) GetHCConfig(vipKey string) (*types.HealthcheckConfig, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	cfg, ok := s.hcConfigs[vipKey]
+	return cfg, ok
+}
+
+// DelHCConfig removes the healthcheck configuration for a VIP.
+//
+// Parameters:
+//   - vipKey: The canonical VIP key string.
+//
+// Returns the removed config and true if found, or nil and false if not found.
+func (s *VIPRealsState) DelHCConfig(vipKey string) (*types.HealthcheckConfig, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	cfg, ok := s.hcConfigs[vipKey]
+	if ok {
+		delete(s.hcConfigs, vipKey)
+	}
+	return cfg, ok
+}
+
+// GetAllHCConfigs returns a copy of all stored healthcheck configurations.
+//
+// Returns a map of vipKey to HealthcheckConfig.
+func (s *VIPRealsState) GetAllHCConfigs() map[string]*types.HealthcheckConfig {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make(map[string]*types.HealthcheckConfig, len(s.hcConfigs))
+	for k, v := range s.hcConfigs {
+		result[k] = v
+	}
+	return result
 }

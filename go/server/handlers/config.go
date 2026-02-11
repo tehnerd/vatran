@@ -155,6 +155,7 @@ func (h *ConfigHandler) HandleExportConfigJSON(w http.ResponseWriter, r *http.Re
 			Proto:       types.NumberToProto(vip.Proto),
 			TargetGroup: targetGroupName,
 			Flags:       vip.Flags,
+			Healthcheck: vip.Healthcheck,
 		})
 	}
 
@@ -218,12 +219,20 @@ func (h *ConfigHandler) getAllVIPsWithBackends(lbInstance *katran.LoadBalancer) 
 			}
 		}
 
+		// Get HC config from state store if available
+		var hcConfig *types.HealthcheckConfig
+		if stateOK {
+			stateKey := lb.VIPKeyString(vip.Address, vip.Port, vip.Proto)
+			hcConfig, _ = state.GetHCConfig(stateKey)
+		}
+
 		result = append(result, types.VIPWithBackends{
-			Address:  vip.Address,
-			Port:     vip.Port,
-			Proto:    vip.Proto,
-			Flags:    flags,
-			Backends: backends,
+			Address:     vip.Address,
+			Port:        vip.Port,
+			Proto:       vip.Proto,
+			Flags:       flags,
+			Backends:    backends,
+			Healthcheck: hcConfig,
 		})
 	}
 
@@ -532,9 +541,10 @@ type BackendExportResponse struct {
 
 // VIPExportResponse contains VIP config for export.
 type VIPExportResponse struct {
-	Address     string `json:"address"`
-	Port        uint16 `json:"port"`
-	Proto       string `json:"proto"`
-	TargetGroup string `json:"target_group"`
-	Flags       uint32 `json:"flags"`
+	Address     string                    `json:"address"`
+	Port        uint16                    `json:"port"`
+	Proto       string                    `json:"proto"`
+	TargetGroup string                    `json:"target_group"`
+	Flags       uint32                    `json:"flags"`
+	Healthcheck *types.HealthcheckConfig  `json:"healthcheck,omitempty"`
 }

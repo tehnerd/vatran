@@ -71,11 +71,140 @@ type BackendConfig struct {
 
 // VIPWithBackends contains a VIP and its backends.
 type VIPWithBackends struct {
-	Address  string
-	Port     uint16
-	Proto    uint8
-	Flags    uint32
-	Backends []BackendConfig
+	Address     string
+	Port        uint16
+	Proto       uint8
+	Flags       uint32
+	Backends    []BackendConfig
+	Healthcheck *HealthcheckConfig
+}
+
+// HealthcheckHTTPConfig contains HTTP-specific healthcheck configuration.
+type HealthcheckHTTPConfig struct {
+	// Path is the HTTP path to check (e.g., "/healthz").
+	Path string `yaml:"path" json:"path"`
+	// ExpectedStatus is the expected HTTP status code (default: 200).
+	ExpectedStatus int `yaml:"expected_status,omitempty" json:"expected_status,omitempty"`
+	// Host is the optional Host header value.
+	Host string `yaml:"host,omitempty" json:"host,omitempty"`
+}
+
+// HealthcheckHTTPSConfig contains HTTPS-specific healthcheck configuration.
+type HealthcheckHTTPSConfig struct {
+	// Path is the HTTP path to check (e.g., "/healthz").
+	Path string `yaml:"path" json:"path"`
+	// ExpectedStatus is the expected HTTP status code (default: 200).
+	ExpectedStatus int `yaml:"expected_status,omitempty" json:"expected_status,omitempty"`
+	// Host is the optional Host header value.
+	Host string `yaml:"host,omitempty" json:"host,omitempty"`
+	// SkipTLSVerify skips TLS certificate verification (default: false).
+	SkipTLSVerify bool `yaml:"skip_tls_verify,omitempty" json:"skip_tls_verify,omitempty"`
+}
+
+// HealthcheckConfig contains per-VIP healthcheck configuration.
+type HealthcheckConfig struct {
+	// Type is the healthcheck type ("http", "https", "tcp", "dummy").
+	Type string `yaml:"type" json:"type"`
+	// Port is the port to check on each real server (default: VIP port).
+	Port int `yaml:"port,omitempty" json:"port,omitempty"`
+	// HTTP contains HTTP-specific healthcheck settings.
+	HTTP *HealthcheckHTTPConfig `yaml:"http,omitempty" json:"http,omitempty"`
+	// HTTPS contains HTTPS-specific healthcheck settings.
+	HTTPS *HealthcheckHTTPSConfig `yaml:"https,omitempty" json:"https,omitempty"`
+	// IntervalMs is the check interval in milliseconds (default: 5000).
+	IntervalMs int `yaml:"interval_ms,omitempty" json:"interval_ms,omitempty"`
+	// TimeoutMs is the check timeout in milliseconds (default: 2000).
+	TimeoutMs int `yaml:"timeout_ms,omitempty" json:"timeout_ms,omitempty"`
+	// HealthyThreshold is the number of consecutive successes before marking healthy (default: 3).
+	HealthyThreshold int `yaml:"healthy_threshold,omitempty" json:"healthy_threshold,omitempty"`
+	// UnhealthyThreshold is the number of consecutive failures before marking unhealthy (default: 3).
+	UnhealthyThreshold int `yaml:"unhealthy_threshold,omitempty" json:"unhealthy_threshold,omitempty"`
+}
+
+// ApplyDefaults fills in default values for zero-valued fields.
+func (hc *HealthcheckConfig) ApplyDefaults() {
+	if hc.IntervalMs <= 0 {
+		hc.IntervalMs = 5000
+	}
+	if hc.TimeoutMs <= 0 {
+		hc.TimeoutMs = 2000
+	}
+	if hc.HealthyThreshold <= 0 {
+		hc.HealthyThreshold = 3
+	}
+	if hc.UnhealthyThreshold <= 0 {
+		hc.UnhealthyThreshold = 3
+	}
+	if hc.HTTP != nil && hc.HTTP.ExpectedStatus <= 0 {
+		hc.HTTP.ExpectedStatus = 200
+	}
+	if hc.HTTPS != nil && hc.HTTPS.ExpectedStatus <= 0 {
+		hc.HTTPS.ExpectedStatus = 200
+	}
+}
+
+// Validate checks the healthcheck configuration for errors.
+//
+// Returns an error if the configuration is invalid.
+func (hc *HealthcheckConfig) Validate() error {
+	validTypes := map[string]bool{"http": true, "https": true, "tcp": true, "dummy": true}
+	if !validTypes[hc.Type] {
+		return fmt.Errorf("invalid healthcheck type %q (must be http, https, tcp, or dummy)", hc.Type)
+	}
+	if hc.Type == "dummy" {
+		return nil
+	}
+	if hc.Type == "http" && hc.HTTP == nil {
+		return fmt.Errorf("http healthcheck requires 'http' configuration")
+	}
+	if hc.Type == "http" && hc.HTTP.Path == "" {
+		return fmt.Errorf("http healthcheck requires 'path' in http configuration")
+	}
+	if hc.Type == "https" && hc.HTTPS == nil {
+		return fmt.Errorf("https healthcheck requires 'https' configuration")
+	}
+	if hc.Type == "https" && hc.HTTPS.Path == "" {
+		return fmt.Errorf("https healthcheck requires 'path' in https configuration")
+	}
+	if hc.TimeoutMs >= hc.IntervalMs {
+		return fmt.Errorf("timeout_ms (%d) must be less than interval_ms (%d)", hc.TimeoutMs, hc.IntervalMs)
+	}
+	if hc.Port < 0 || hc.Port > 65535 {
+		return fmt.Errorf("invalid healthcheck port: %d", hc.Port)
+	}
+	return nil
+}
+
+// HCRealHealth represents the health state of a single real from the HC service.
+type HCRealHealth struct {
+	// Address is the real server IP address.
+	Address string `json:"address"`
+	// Healthy indicates whether the real is healthy.
+	Healthy bool `json:"healthy"`
+	// LastCheckTime is the timestamp of the last health check.
+	LastCheckTime string `json:"last_check_time,omitempty"`
+	// LastStatusChange is the timestamp of the last status change.
+	LastStatusChange string `json:"last_status_change,omitempty"`
+	// ConsecutiveFailures is the number of consecutive failed checks.
+	ConsecutiveFailures int `json:"consecutive_failures"`
+}
+
+// HCVIPHealthResponse represents the health response for a single VIP from the HC service.
+type HCVIPHealthResponse struct {
+	// VIP identifies the virtual IP.
+	VIP HCVIPKey `json:"vip"`
+	// Reals contains health states for all reals of this VIP.
+	Reals []HCRealHealth `json:"reals"`
+}
+
+// HCVIPKey is the VIP identifier used in HC service responses.
+type HCVIPKey struct {
+	// Address is the IP address of the VIP.
+	Address string `json:"address"`
+	// Port is the port number.
+	Port uint16 `json:"port"`
+	// Proto is the IP protocol number.
+	Proto uint8 `json:"proto"`
 }
 
 // KatranConfigExport contains the exported katran configuration.

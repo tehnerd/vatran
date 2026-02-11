@@ -16,6 +16,7 @@ type Manager struct {
 	ready                 bool
 	state                 *VIPRealsState
 	healthcheckerEndpoint string
+	hcClient              *HCClient
 }
 
 var (
@@ -43,6 +44,9 @@ func (m *Manager) SetHealthcheckerEndpoint(endpoint string) {
 	defer m.mu.Unlock()
 	m.healthcheckerEndpoint = endpoint
 	m.state = NewVIPRealsState(endpoint)
+	if endpoint != "" {
+		m.hcClient = NewHCClient(endpoint)
+	}
 }
 
 // Create creates a new LoadBalancer instance with the provided configuration.
@@ -217,4 +221,13 @@ func (m *Manager) GetHealthcheckerEndpoint() string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.healthcheckerEndpoint
+}
+
+// GetHCClient returns the healthcheck service client, or nil if not configured.
+//
+// Returns the HCClient or nil.
+func (m *Manager) GetHCClient() *HCClient {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.hcClient
 }
