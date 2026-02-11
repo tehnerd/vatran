@@ -1916,6 +1916,16 @@ vips:
     proto: "tcp"
     target_group: group-0
     flags: 0
+    healthcheck:
+      type: "http"
+      port: 8080
+      http:
+        path: "/healthz"
+        expected_status: 200
+      interval_ms: 5000
+      timeout_ms: 2000
+      healthy_threshold: 3
+      unhealthy_threshold: 3
 ```
 
 **Error Response:**
@@ -2026,7 +2036,19 @@ Export the current running configuration as JSON. Same data as the YAML export b
         "port": 80,
         "proto": "tcp",
         "target_group": "group-0",
-        "flags": 0
+        "flags": 0,
+        "healthcheck": {
+          "type": "http",
+          "port": 8080,
+          "http": {
+            "path": "/healthz",
+            "expected_status": 200
+          },
+          "interval_ms": 5000,
+          "timeout_ms": 2000,
+          "healthy_threshold": 3,
+          "unhealthy_threshold": 3
+        }
       }
     ]
   }
