@@ -7,3 +7,4 @@ go/cmd/katran-server/katran-server
 go/cmd/katran-cli/katran-cli
 go/cmd/authctl/authctl
 go/cmd/hc-service/hc-service
+go/cmd/bgp-service/bgp-service

@@ -17,6 +17,8 @@ type Manager struct {
 	state                 *VIPRealsState
 	healthcheckerEndpoint string
 	hcClient              *HCClient
+	bgpClient             *BGPClient
+	bgpMinHealthyReals    int
 }
 
 var (
@@ -230,4 +232,39 @@ func (m *Manager) GetHCClient() *HCClient {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.hcClient
+}
+
+// SetBGPEndpoint sets the BGP service endpoint and creates the BGP client.
+//
+// Parameters:
+//   - url: The URL of the BGP service (e.g., "http://localhost:9100").
+//   - minHealthyReals: Minimum number of healthy reals before advertising a VIP.
+func (m *Manager) SetBGPEndpoint(url string, minHealthyReals int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if url != "" {
+		m.bgpClient = NewBGPClient(url)
+	}
+	m.bgpMinHealthyReals = minHealthyReals
+	if m.bgpMinHealthyReals <= 0 {
+		m.bgpMinHealthyReals = 1
+	}
+}
+
+// GetBGPClient returns the BGP service client, or nil if not configured.
+//
+// Returns the BGPClient or nil.
+func (m *Manager) GetBGPClient() *BGPClient {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.bgpClient
+}
+
+// GetBGPMinHealthyReals returns the minimum healthy reals threshold for BGP advertisement.
+//
+// Returns the threshold value.
+func (m *Manager) GetBGPMinHealthyReals() int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.bgpMinHealthyReals
 }

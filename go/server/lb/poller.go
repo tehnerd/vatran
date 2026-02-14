@@ -89,6 +89,9 @@ func (p *HCPoller) poll(ctx context.Context) {
 		return
 	}
 
+	// Track which VIPs had health transitions for BGP evaluation
+	vipsWithTransitions := make(map[string]bool)
+
 	for _, vipHealth := range allHealth {
 		vipKey := VIPKeyString(vipHealth.VIP.Address, vipHealth.VIP.Port, vipHealth.VIP.Proto)
 
@@ -112,6 +115,8 @@ func (p *HCPoller) poll(ctx context.Context) {
 			if oldHealthy == realHealth.Healthy {
 				continue
 			}
+
+			vipsWithTransitions[vipKey] = true
 
 			// Get real info for katran operation
 			reals := state.GetReals(vipKey)
@@ -139,6 +144,35 @@ func (p *HCPoller) poll(ctx context.Context) {
 					log.Printf("HC poller: failed to remove real %s from VIP %s: %v", realHealth.Address, vipKey, err)
 					state.UpdateHealth(vipKey, realHealth.Address, oldHealthy)
 				}
+			}
+		}
+	}
+
+	// Evaluate BGP advertise/withdraw for VIPs that had health transitions
+	p.evaluateBGP(ctx, state, vipsWithTransitions)
+}
+
+// evaluateBGP checks VIPs with health transitions and advertises or withdraws
+// routes via the BGP service based on the healthy real count threshold.
+func (p *HCPoller) evaluateBGP(ctx context.Context, state *VIPRealsState, vipKeys map[string]bool) {
+	bgpClient := p.manager.GetBGPClient()
+	if bgpClient == nil {
+		return
+	}
+
+	threshold := p.manager.GetBGPMinHealthyReals()
+
+	for vipKey := range vipKeys {
+		healthyCount := state.CountHealthyReals(vipKey)
+		vipAddress := GetVIPAddress(vipKey)
+
+		if healthyCount >= threshold {
+			if err := bgpClient.Advertise(ctx, vipAddress, 32); err != nil {
+				log.Printf("HC poller: failed to advertise VIP %s via BGP: %v", vipAddress, err)
+			}
+		} else {
+			if err := bgpClient.Withdraw(ctx, vipAddress, 32); err != nil {
+				log.Printf("HC poller: failed to withdraw VIP %s from BGP: %v", vipAddress, err)
 			}
 		}
 	}

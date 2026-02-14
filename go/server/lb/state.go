@@ -279,3 +279,53 @@ func (s *VIPRealsState) GetAllHCConfigs() map[string]*types.HealthcheckConfig {
 	}
 	return result
 }
+
+// CountHealthyReals returns the number of healthy reals for a given VIP.
+//
+// Parameters:
+//   - vipKey: The canonical VIP key string.
+//
+// Returns the count of healthy reals.
+func (s *VIPRealsState) CountHealthyReals(vipKey string) int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	reals, exists := s.vips[vipKey]
+	if !exists {
+		return 0
+	}
+	count := 0
+	for _, rs := range reals {
+		if rs.Healthy {
+			count++
+		}
+	}
+	return count
+}
+
+// GetVIPAddress extracts the address portion from a canonical VIP key string.
+// The key format is "address:port:proto" (e.g., "10.0.0.1:80:6").
+//
+// Parameters:
+//   - vipKey: The canonical VIP key string.
+//
+// Returns the address portion of the key.
+func GetVIPAddress(vipKey string) string {
+	// Find the last two colons to extract the address
+	// Handle IPv6 addresses which contain colons
+	lastColon := -1
+	secondLastColon := -1
+	for i := len(vipKey) - 1; i >= 0; i-- {
+		if vipKey[i] == ':' {
+			if lastColon == -1 {
+				lastColon = i
+			} else {
+				secondLastColon = i
+				break
+			}
+		}
+	}
+	if secondLastColon >= 0 {
+		return vipKey[:secondLastColon]
+	}
+	return vipKey
+}

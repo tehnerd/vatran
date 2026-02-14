@@ -242,6 +242,8 @@ type KatranConfigExport struct {
 	Testing               bool
 	HashFunc              int
 	HealthcheckerEndpoint string
+	BGPEndpoint           string
+	BGPMinHealthyReals    int
 }
 
 // NumberToProto converts an IP protocol number to a string.

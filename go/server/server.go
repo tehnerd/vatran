@@ -218,6 +218,13 @@ func (s *Server) InitFromConfig(cfg *FullConfig) error {
 	// Set healthchecker endpoint before creating LB so state store is ready
 	manager.SetHealthcheckerEndpoint(cfg.LB.Features.HealthcheckerEndpoint)
 
+	// Set BGP endpoint if configured
+	if cfg.LB.Features.BGPEndpoint != "" {
+		manager.SetBGPEndpoint(cfg.LB.Features.BGPEndpoint, cfg.LB.Features.BGPMinHealthyReals)
+		log.Printf("BGP integration enabled: endpoint=%s min_healthy_reals=%d",
+			cfg.LB.Features.BGPEndpoint, manager.GetBGPMinHealthyReals())
+	}
+
 	// Build katran config from YAML config
 	katranCfg := s.buildKatranConfig(cfg)
 

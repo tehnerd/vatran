@@ -411,6 +411,11 @@ type FeaturesConfig struct {
 	Testing bool `yaml:"testing"`
 	// HealthcheckerEndpoint is the URL of the healthchecker service API endpoint.
 	HealthcheckerEndpoint string `yaml:"healthchecker_endpoint"`
+	// BGPEndpoint is the URL of the BGP service API endpoint (e.g., "http://localhost:9100").
+	BGPEndpoint string `yaml:"bgp_endpoint"`
+	// BGPMinHealthyReals is the minimum number of healthy reals required to advertise a VIP via BGP.
+	// Defaults to 1 if not set.
+	BGPMinHealthyReals int `yaml:"bgp_min_healthy_reals"`
 }
 
 // BackendConfig is an alias to types.BackendConfig for convenience.
@@ -732,6 +737,8 @@ func (lc *LBConfig) ToCreateLBRequest(bpfProgDir string) map[string]interface{} 
 	}
 	result["testing"] = lc.Features.Testing
 	result["healthchecker_endpoint"] = lc.Features.HealthcheckerEndpoint
+	result["bgp_endpoint"] = lc.Features.BGPEndpoint
+	result["bgp_min_healthy_reals"] = lc.Features.BGPMinHealthyReals
 
 	// Hash function
 	result["hash_function"] = lc.HashFunction
@@ -913,6 +920,8 @@ func buildFullConfigFromRuntime(serverCfg *Config, katranCfg *KatranConfigExport
 				CleanupOnShutdown:     &cleanupOnShutdown,
 				Testing:               katranCfg.Testing,
 				HealthcheckerEndpoint: katranCfg.HealthcheckerEndpoint,
+				BGPEndpoint:           katranCfg.BGPEndpoint,
+				BGPMinHealthyReals:    katranCfg.BGPMinHealthyReals,
 			},
 			HashFunction: IntToHashFunction(katranCfg.HashFunc),
 		}
