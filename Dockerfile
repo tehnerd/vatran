@@ -21,7 +21,8 @@ COPY _build_go/balancer.bpf.o /balancer.bpf.o
 COPY _build_go/healthchecking.bpf.o /healthchecking.bpf.o
 COPY go/cmd/katran-server/katran-server /katran-server
 COPY go/cmd/katran-cli/katran-cli /katran-cli
-COPY go/cmd/authcli/authcli /authcli
+COPY go/cmd/authctl/authctl /authctl
+COPY go/cmd/hc-service/hc-service /hc-service
 COPY ui/dist /ui/
 
 ENTRYPOINT ["/katran-server", "-static-dir", "/ui/", "-bpf-prog-dir", "/", "-config", "/config.yaml"]
