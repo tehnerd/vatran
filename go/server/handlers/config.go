@@ -379,6 +379,8 @@ func (h *ConfigHandler) buildLBConfigResponse(cfg *types.KatranConfigExport) *LB
 			CleanupOnShutdown:     cfg.CleanupOnShutdown,
 			Testing:               cfg.Testing,
 			HealthcheckerEndpoint: cfg.HealthcheckerEndpoint,
+			BGPEndpoint:           cfg.BGPEndpoint,
+			BGPMinHealthyReals:    cfg.BGPMinHealthyReals,
 		},
 		HashFunction: types.IntToHashFunction(cfg.HashFunc),
 	}
@@ -529,6 +531,8 @@ type FeaturesExportResponse struct {
 	CleanupOnShutdown     bool   `json:"cleanup_on_shutdown"`
 	Testing               bool   `json:"testing"`
 	HealthcheckerEndpoint string `json:"healthchecker_endpoint,omitempty"`
+	BGPEndpoint           string `json:"bgp_endpoint,omitempty"`
+	BGPMinHealthyReals    int    `json:"bgp_min_healthy_reals,omitempty"`
 }
 
 // BackendExportResponse contains backend config for export.

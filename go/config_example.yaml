@@ -116,6 +116,11 @@ lb:
     testing: false            # Testing mode - don't program forwarding plane
     # Healthchecker service API endpoint (optional)
     # healthchecker_endpoint: "http://healthchecker.example.com/api"
+    # BGP service API endpoint (optional)
+    # When configured, the server will advertise VIPs via BGP when they have
+    # enough healthy backends, and withdraw them when health drops below threshold.
+    # bgp_endpoint: "http://localhost:9100"
+    # bgp_min_healthy_reals: 1  # Minimum healthy reals to advertise a VIP (default: 1)
 
   # Hash function: "maglev" or "maglev_v2"
   hash_function: "maglev"

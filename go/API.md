@@ -1900,6 +1900,9 @@ lb:
     memlock_unlimited: true
     cleanup_on_shutdown: true
     testing: false
+    # healthchecker_endpoint: "http://healthchecker.example.com/api"
+    # bgp_endpoint: "http://localhost:9100"
+    # bgp_min_healthy_reals: 1
   hash_function: "maglev"
 
 target_groups:
@@ -2017,7 +2020,10 @@ Export the current running configuration as JSON. Same data as the YAML export b
         "enable_cid_v3": false,
         "memlock_unlimited": true,
         "cleanup_on_shutdown": true,
-        "testing": false
+        "testing": false,
+        "healthchecker_endpoint": "",
+        "bgp_endpoint": "",
+        "bgp_min_healthy_reals": 0
       },
       "hash_function": "maglev"
     },

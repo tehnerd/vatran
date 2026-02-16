@@ -61,7 +61,7 @@ type Config struct {
 func DefaultConfig() *Config {
 	return &Config{
 		Server: ServerConfig{
-			Host:         "",
+			Host:         "127.0.0.1",
 			Port:         9000,
 			ReadTimeout:  30,
 			WriteTimeout: 30,
@@ -101,6 +101,10 @@ func LoadConfig(path string) (*Config, error) {
 
 	if err := yaml.Unmarshal(data, cfg); err != nil {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	}
+
+	if cfg.Server.Host == "" {
+		cfg.Server.Host = "127.0.0.1"
 	}
 
 	if err := cfg.Validate(); err != nil {
