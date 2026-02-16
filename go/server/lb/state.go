@@ -2,6 +2,7 @@ package lb
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
 
 	"github.com/tehnerd/vatran/go/server/types"
@@ -328,4 +329,46 @@ func GetVIPAddress(vipKey string) string {
 		return vipKey[:secondLastColon]
 	}
 	return vipKey
+}
+
+// ParseVIPKey parses a canonical VIP key string back into its components.
+// The key format is "address:port:proto" (e.g., "10.0.0.1:80:6").
+// IPv6 addresses with colons are handled correctly.
+//
+// Parameters:
+//   - vipKey: The canonical VIP key string to parse.
+//
+// Returns the address, port, protocol, and any parsing error.
+func ParseVIPKey(vipKey string) (address string, port uint16, proto uint8, err error) {
+	// Find the last two colons (handles IPv6 addresses)
+	lastColon := -1
+	secondLastColon := -1
+	for i := len(vipKey) - 1; i >= 0; i-- {
+		if vipKey[i] == ':' {
+			if lastColon == -1 {
+				lastColon = i
+			} else {
+				secondLastColon = i
+				break
+			}
+		}
+	}
+	if secondLastColon < 0 || lastColon < 0 {
+		return "", 0, 0, fmt.Errorf("invalid VIP key format: %q", vipKey)
+	}
+
+	address = vipKey[:secondLastColon]
+	portStr := vipKey[secondLastColon+1 : lastColon]
+	protoStr := vipKey[lastColon+1:]
+
+	p, err := strconv.ParseUint(portStr, 10, 16)
+	if err != nil {
+		return "", 0, 0, fmt.Errorf("invalid port in VIP key %q: %w", vipKey, err)
+	}
+	pr, err := strconv.ParseUint(protoStr, 10, 8)
+	if err != nil {
+		return "", 0, 0, fmt.Errorf("invalid proto in VIP key %q: %w", vipKey, err)
+	}
+
+	return address, uint16(p), uint8(pr), nil
 }

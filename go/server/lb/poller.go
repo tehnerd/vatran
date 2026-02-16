@@ -7,15 +7,22 @@ import (
 	"time"
 
 	"github.com/tehnerd/vatran/go/katran"
+	"github.com/tehnerd/vatran/go/server/types"
 )
+
+// defaultReconcileEvery is the number of poll cycles between reconciliation runs.
+// With a default 5s poll interval, this gives ~30s between reconciliations.
+const defaultReconcileEvery = 6
 
 // HCPoller periodically polls the healthcheck service for health states
 // and applies transitions to the local state store and katran.
 type HCPoller struct {
-	manager  *Manager
-	interval time.Duration
-	cancel   context.CancelFunc
-	wg       sync.WaitGroup
+	manager        *Manager
+	interval       time.Duration
+	cancel         context.CancelFunc
+	wg             sync.WaitGroup
+	reconcileEvery int
+	pollCount      int
 }
 
 // NewHCPoller creates a new HCPoller.
@@ -27,8 +34,9 @@ type HCPoller struct {
 // Returns a new HCPoller instance.
 func NewHCPoller(manager *Manager, interval time.Duration) *HCPoller {
 	return &HCPoller{
-		manager:  manager,
-		interval: interval,
+		manager:        manager,
+		interval:       interval,
+		reconcileEvery: defaultReconcileEvery,
 	}
 }
 
@@ -81,6 +89,13 @@ func (p *HCPoller) poll(ctx context.Context) {
 	lbInstance, lbOK := p.manager.Get()
 	if !lbOK {
 		return
+	}
+
+	// Run reconciliation on a slower cadence
+	p.pollCount++
+	if p.pollCount >= p.reconcileEvery {
+		p.pollCount = 0
+		p.reconcile(ctx, state, hcClient)
 	}
 
 	allHealth, err := hcClient.GetAllHealth(ctx)
@@ -150,6 +165,72 @@ func (p *HCPoller) poll(ctx context.Context) {
 
 	// Evaluate BGP advertise/withdraw for VIPs that had health transitions
 	p.evaluateBGP(ctx, state, vipsWithTransitions)
+}
+
+// reconcile checks that the HC service knows about all locally registered VIPs
+// and re-registers any that are missing. This handles the case where the HC
+// service restarts or starts after the katran server, losing its registrations.
+//
+// Parameters:
+//   - ctx: Context for the reconciliation requests.
+//   - state: The local VIP/reals state store.
+//   - hcClient: The healthcheck service client.
+func (p *HCPoller) reconcile(ctx context.Context, state *VIPRealsState, hcClient *HCClient) {
+	localConfigs := state.GetAllHCConfigs()
+
+	// Filter to non-dummy configs only
+	nonDummy := make(map[string]*types.HealthcheckConfig)
+	for vipKey, cfg := range localConfigs {
+		if cfg.Type != "dummy" {
+			nonDummy[vipKey] = cfg
+		}
+	}
+	if len(nonDummy) == 0 {
+		return
+	}
+
+	allHealth, err := hcClient.GetAllHealth(ctx)
+	if err != nil {
+		log.Printf("HC poller reconcile: failed to fetch health states: %v", err)
+		return
+	}
+
+	// Build a map of VIP keys known to the HC service, along with their real counts
+	type hcVIPInfo struct {
+		realCount int
+	}
+	knownVIPs := make(map[string]hcVIPInfo, len(allHealth))
+	for _, vipHealth := range allHealth {
+		key := VIPKeyString(vipHealth.VIP.Address, vipHealth.VIP.Port, vipHealth.VIP.Proto)
+		knownVIPs[key] = hcVIPInfo{realCount: len(vipHealth.Reals)}
+	}
+
+	for vipKey, hcCfg := range nonDummy {
+		address, port, proto, err := ParseVIPKey(vipKey)
+		if err != nil {
+			log.Printf("HC poller reconcile: failed to parse VIP key %q: %v", vipKey, err)
+			continue
+		}
+		hcVIP := types.HCVIPKey{Address: address, Port: port, Proto: proto}
+		reals := state.GetReals(vipKey)
+
+		info, registered := knownVIPs[vipKey]
+		if !registered {
+			// VIP is missing from the HC service — re-register it
+			if err := hcClient.RegisterVIP(ctx, hcVIP, reals, hcCfg); err != nil {
+				log.Printf("HC poller reconcile: failed to re-register VIP %s: %v", vipKey, err)
+			} else {
+				log.Printf("HC poller reconcile: re-registered VIP %s with %d reals", vipKey, len(reals))
+			}
+		} else if len(reals) != info.realCount {
+			// VIP is registered but real count differs — update
+			if err := hcClient.UpdateVIP(ctx, hcVIP, hcCfg, reals); err != nil {
+				log.Printf("HC poller reconcile: failed to update reals for VIP %s: %v", vipKey, err)
+			} else {
+				log.Printf("HC poller reconcile: updated VIP %s reals (local=%d, remote=%d)", vipKey, len(reals), info.realCount)
+			}
+		}
+	}
 }
 
 // evaluateBGP checks VIPs with health transitions and advertises or withdraws
