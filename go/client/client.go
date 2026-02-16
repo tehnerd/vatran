@@ -144,6 +144,7 @@ type Real struct {
 	Address string `json:"address"`
 	Weight  uint32 `json:"weight"`
 	Flags   uint8  `json:"flags,omitempty"`
+	Healthy bool   `json:"healthy"`
 }
 
 // LBStats represents basic load balancer statistics.
@@ -685,6 +686,88 @@ type ExportVIP struct {
 	Proto       string `json:"proto"`
 	TargetGroup string `json:"target_group"`
 	Flags       uint32 `json:"flags"`
+}
+
+// HealthcheckHTTPConfig contains HTTP-specific healthcheck settings.
+type HealthcheckHTTPConfig struct {
+	Path           string `json:"path"`
+	ExpectedStatus int    `json:"expected_status,omitempty"`
+	Host           string `json:"host,omitempty"`
+}
+
+// HealthcheckHTTPSConfig contains HTTPS-specific healthcheck settings.
+type HealthcheckHTTPSConfig struct {
+	Path           string `json:"path"`
+	ExpectedStatus int    `json:"expected_status,omitempty"`
+	Host           string `json:"host,omitempty"`
+	SkipTLSVerify  bool   `json:"skip_tls_verify,omitempty"`
+}
+
+// VIPHealthcheckConfig represents the healthcheck configuration for a VIP.
+type VIPHealthcheckConfig struct {
+	Type               string                  `json:"type"`
+	Port               int                     `json:"port,omitempty"`
+	HTTP               *HealthcheckHTTPConfig  `json:"http,omitempty"`
+	HTTPS              *HealthcheckHTTPSConfig `json:"https,omitempty"`
+	IntervalMs         int                     `json:"interval_ms,omitempty"`
+	TimeoutMs          int                     `json:"timeout_ms,omitempty"`
+	HealthyThreshold   int                     `json:"healthy_threshold,omitempty"`
+	UnhealthyThreshold int                     `json:"unhealthy_threshold,omitempty"`
+}
+
+// RealHealthStatus represents detailed health status for a single real server.
+type RealHealthStatus struct {
+	Address             string `json:"address"`
+	Healthy             bool   `json:"healthy"`
+	LastCheckTime       string `json:"last_check_time,omitempty"`
+	LastStatusChange    string `json:"last_status_change,omitempty"`
+	ConsecutiveFailures int    `json:"consecutive_failures"`
+}
+
+// VIPHealthStatus represents the health status of all reals for a VIP.
+type VIPHealthStatus struct {
+	VIP   VIP                `json:"vip"`
+	Reals []RealHealthStatus `json:"reals"`
+}
+
+// GetVIPHealthcheck returns the healthcheck configuration for a VIP.
+//
+// Parameters:
+//   - address: The IP address of the VIP.
+//   - port: The port number.
+//   - proto: The IP protocol number.
+//
+// Returns:
+//   - The healthcheck configuration, or nil if none is configured.
+//   - An error if the request fails.
+func (c *Client) GetVIPHealthcheck(address string, port uint16, proto uint8) (*VIPHealthcheckConfig, error) {
+	path := fmt.Sprintf("/api/v1/vips/healthcheck?address=%s&port=%d&proto=%d",
+		url.QueryEscape(address), port, proto)
+	var config VIPHealthcheckConfig
+	if err := c.doRequest(http.MethodGet, path, nil, &config); err != nil {
+		return nil, err
+	}
+	return &config, nil
+}
+
+// GetVIPHealthcheckStatus returns the detailed health status for all reals of a VIP.
+//
+// Parameters:
+//   - address: The IP address of the VIP.
+//   - port: The port number.
+//   - proto: The IP protocol number.
+//
+// Returns:
+//   - The health status containing per-real health information.
+//   - An error if the request fails.
+func (c *Client) GetVIPHealthcheckStatus(address string, port uint16, proto uint8) (*VIPHealthStatus, error) {
+	path := fmt.Sprintf("/api/v1/vips/healthcheck/status?address=%s&port=%d&proto=%d",
+		url.QueryEscape(address), port, proto)
+	var status VIPHealthStatus
+	if err := c.doRequest(http.MethodGet, path, nil, &status); err != nil {
+		return nil, err
+	}
+	return &status, nil
 }
 
 // ExportConfigYAML exports the current running configuration as YAML.

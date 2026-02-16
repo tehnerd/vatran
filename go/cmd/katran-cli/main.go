@@ -6,11 +6,11 @@
 //
 // Commands:
 //
-//	vip     - Manage VIPs (Virtual IPs)
+//	vip     - Manage VIPs (list, add, remove, show, health)
 //	real    - Manage real servers (backends)
 //	stats   - View statistics
 //	mac     - Manage MAC address
-//	hc      - Manage healthcheck destinations
+//	hc      - Healthcheck management (dst, config, status)
 //	config  - Export configuration
 package main
 
@@ -87,23 +87,40 @@ Global Flags:
   -timeout int     Request timeout in seconds (default 30)
 
 Commands:
-  vip     Manage VIPs (list, add, remove, show)
+  vip     Manage VIPs (list, add, remove, show, health)
   real    Manage real servers (add, remove, update)
   stats   View statistics (vip, real, lru, xdp, decap, etc.)
   mac     Manage default router MAC address (show, set)
-  hc      Manage healthcheck destinations (list, add, remove)
+  hc      Healthcheck management (dst, config, status)
   config  Export configuration (export)
   health  Check server health
+
+VIP Commands:
+  vip list                              List all VIPs
+  vip add <addr> <port> <proto>         Add a VIP
+  vip remove <addr> <port> <proto>      Remove a VIP
+  vip show <addr> <port> <proto>        Show VIP details with reals and HC config
+  vip health <addr> <port> <proto>      Show detailed HC status for a VIP
+
+Healthcheck Commands:
+  hc dst list                           List HC destination mappings
+  hc dst add <somark> <destination>     Add an HC destination mapping
+  hc dst remove <somark>                Remove an HC destination mapping
+  hc config <addr> <port> <proto>       Show HC configuration for a VIP
+  hc status <addr> <port> <proto>       Show detailed HC status for a VIP
 
 Examples:
   katran-cli vip list
   katran-cli vip add 10.0.0.1 80 tcp
   katran-cli vip show 10.0.0.1 80 tcp
+  katran-cli vip health 10.0.0.1 80 tcp
   katran-cli real add 10.0.0.1 80 tcp 192.168.1.1 100
   katran-cli stats vip 10.0.0.1 80 tcp --watch
   katran-cli stats real 192.168.1.1 --watch
   katran-cli mac show
-  katran-cli hc list
+  katran-cli hc dst list
+  katran-cli hc config 10.0.0.1 80 tcp
+  katran-cli hc status 10.0.0.1 80 tcp
   katran-cli config export
   katran-cli config export --format json
   katran-cli config export --output config.yaml
@@ -141,7 +158,7 @@ func protoToString(proto uint8) string {
 // handleVIP handles VIP management commands.
 func handleVIP(c *client.Client, args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("usage: vip <list|add|remove|show> [args]")
+		return fmt.Errorf("usage: vip <list|add|remove|show|health> [args]")
 	}
 
 	switch args[0] {
@@ -153,6 +170,8 @@ func handleVIP(c *client.Client, args []string) error {
 		return vipRemove(c, args[1:])
 	case "show", "get":
 		return vipShow(c, args[1:])
+	case "health":
+		return vipHealth(c, args[1:])
 	default:
 		return fmt.Errorf("unknown vip command: %s", args[0])
 	}
@@ -258,16 +277,118 @@ func vipShow(c *client.Client, args []string) error {
 	fmt.Printf("VIP: %s:%d/%s\n", args[0], port, protoToString(proto))
 	fmt.Println()
 
+	// Display healthcheck configuration if available
+	hcConfig, hcErr := c.GetVIPHealthcheck(args[0], uint16(port), proto)
+	if hcErr == nil && hcConfig.Type != "" {
+		fmt.Println("Healthcheck Configuration:")
+		fmt.Printf("  Type:                %s\n", hcConfig.Type)
+		if hcConfig.Port != 0 {
+			fmt.Printf("  Port:                %d\n", hcConfig.Port)
+		}
+		if hcConfig.IntervalMs != 0 {
+			fmt.Printf("  Interval:            %dms\n", hcConfig.IntervalMs)
+		}
+		if hcConfig.TimeoutMs != 0 {
+			fmt.Printf("  Timeout:             %dms\n", hcConfig.TimeoutMs)
+		}
+		if hcConfig.HealthyThreshold != 0 {
+			fmt.Printf("  Healthy Threshold:   %d\n", hcConfig.HealthyThreshold)
+		}
+		if hcConfig.UnhealthyThreshold != 0 {
+			fmt.Printf("  Unhealthy Threshold: %d\n", hcConfig.UnhealthyThreshold)
+		}
+		if hcConfig.HTTP != nil {
+			fmt.Printf("  HTTP Path:           %s\n", hcConfig.HTTP.Path)
+			if hcConfig.HTTP.Host != "" {
+				fmt.Printf("  HTTP Host:           %s\n", hcConfig.HTTP.Host)
+			}
+			if hcConfig.HTTP.ExpectedStatus != 0 {
+				fmt.Printf("  HTTP Expected:       %d\n", hcConfig.HTTP.ExpectedStatus)
+			}
+		}
+		if hcConfig.HTTPS != nil {
+			fmt.Printf("  HTTPS Path:          %s\n", hcConfig.HTTPS.Path)
+			if hcConfig.HTTPS.Host != "" {
+				fmt.Printf("  HTTPS Host:          %s\n", hcConfig.HTTPS.Host)
+			}
+			if hcConfig.HTTPS.ExpectedStatus != 0 {
+				fmt.Printf("  HTTPS Expected:      %d\n", hcConfig.HTTPS.ExpectedStatus)
+			}
+			if hcConfig.HTTPS.SkipTLSVerify {
+				fmt.Printf("  HTTPS Skip TLS:      true\n")
+			}
+		}
+		fmt.Println()
+	} else {
+		fmt.Println("No healthcheck configured")
+		fmt.Println()
+	}
+
 	if len(reals) == 0 {
 		fmt.Println("No real servers configured")
 		return nil
 	}
 
 	fmt.Printf("Real Servers (%d):\n", len(reals))
-	fmt.Printf("  %-40s %-10s %-8s\n", "ADDRESS", "WEIGHT", "FLAGS")
-	fmt.Printf("  %s\n", strings.Repeat("-", 60))
+	fmt.Printf("  %-40s %-10s %-8s %-8s\n", "ADDRESS", "WEIGHT", "FLAGS", "HEALTHY")
+	fmt.Printf("  %s\n", strings.Repeat("-", 70))
 	for _, real := range reals {
-		fmt.Printf("  %-40s %-10d %-8d\n", real.Address, real.Weight, real.Flags)
+		healthStr := "yes"
+		if !real.Healthy {
+			healthStr = "no"
+		}
+		fmt.Printf("  %-40s %-10d %-8d %-8s\n", real.Address, real.Weight, real.Flags, healthStr)
+	}
+	return nil
+}
+
+// vipHealth shows detailed healthcheck status for a VIP from the HC service.
+func vipHealth(c *client.Client, args []string) error {
+	if len(args) < 3 {
+		return fmt.Errorf("usage: vip health <address> <port> <proto>")
+	}
+
+	port, err := strconv.ParseUint(args[1], 10, 16)
+	if err != nil {
+		return fmt.Errorf("invalid port: %v", err)
+	}
+
+	proto, err := parseProto(args[2])
+	if err != nil {
+		return err
+	}
+
+	status, err := c.GetVIPHealthcheckStatus(args[0], uint16(port), proto)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Health Status for VIP: %s:%d/%s\n", args[0], port, protoToString(proto))
+	fmt.Println()
+
+	if len(status.Reals) == 0 {
+		fmt.Println("No real servers found")
+		return nil
+	}
+
+	fmt.Printf("%-40s %-9s %-24s %-24s %-10s\n",
+		"ADDRESS", "HEALTHY", "LAST CHECK", "LAST CHANGE", "FAILURES")
+	fmt.Println(strings.Repeat("-", 110))
+	for _, r := range status.Reals {
+		healthStr := "yes"
+		if !r.Healthy {
+			healthStr = "no"
+		}
+		lastCheck := r.LastCheckTime
+		if lastCheck == "" {
+			lastCheck = "-"
+		}
+		lastChange := r.LastStatusChange
+		if lastChange == "" {
+			lastChange = "-"
+		}
+		fmt.Printf("%-40s %-9s %-24s %-24s %-10d\n",
+			r.Address, healthStr, lastCheck, lastChange, r.ConsecutiveFailures)
 	}
 	return nil
 }
@@ -762,10 +883,35 @@ func handleMAC(c *client.Client, args []string) error {
 	}
 }
 
-// handleHC handles healthcheck destination commands.
+// handleHC handles healthcheck commands.
 func handleHC(c *client.Client, args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("usage: hc <list|add|remove> [args]")
+		return fmt.Errorf("usage: hc <dst|config|status> [args]")
+	}
+
+	switch args[0] {
+	case "dst":
+		return handleHCDst(c, args[1:])
+	case "config":
+		return hcConfig(c, args[1:])
+	case "status":
+		return vipHealth(c, args[1:])
+	// Backwards compatibility: list/add/remove map to dst subcommands
+	case "list", "ls":
+		return hcList(c)
+	case "add":
+		return hcAdd(c, args[1:])
+	case "remove", "rm", "delete", "del":
+		return hcRemove(c, args[1:])
+	default:
+		return fmt.Errorf("unknown hc command: %s", args[0])
+	}
+}
+
+// handleHCDst handles healthcheck destination management subcommands.
+func handleHCDst(c *client.Client, args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("usage: hc dst <list|add|remove> [args]")
 	}
 
 	switch args[0] {
@@ -776,8 +922,75 @@ func handleHC(c *client.Client, args []string) error {
 	case "remove", "rm", "delete", "del":
 		return hcRemove(c, args[1:])
 	default:
-		return fmt.Errorf("unknown hc command: %s", args[0])
+		return fmt.Errorf("unknown hc dst command: %s", args[0])
 	}
+}
+
+// hcConfig shows the healthcheck configuration for a VIP.
+func hcConfig(c *client.Client, args []string) error {
+	if len(args) < 3 {
+		return fmt.Errorf("usage: hc config <address> <port> <proto>")
+	}
+
+	port, err := strconv.ParseUint(args[1], 10, 16)
+	if err != nil {
+		return fmt.Errorf("invalid port: %v", err)
+	}
+
+	proto, err := parseProto(args[2])
+	if err != nil {
+		return err
+	}
+
+	config, err := c.GetVIPHealthcheck(args[0], uint16(port), proto)
+	if err != nil {
+		return err
+	}
+
+	if config.Type == "" {
+		fmt.Printf("No healthcheck configured for VIP %s:%d/%s\n", args[0], port, protoToString(proto))
+		return nil
+	}
+
+	fmt.Printf("Healthcheck Configuration for VIP %s:%d/%s:\n", args[0], port, protoToString(proto))
+	fmt.Printf("  Type:                %s\n", config.Type)
+	if config.Port != 0 {
+		fmt.Printf("  Port:                %d\n", config.Port)
+	}
+	if config.IntervalMs != 0 {
+		fmt.Printf("  Interval:            %dms\n", config.IntervalMs)
+	}
+	if config.TimeoutMs != 0 {
+		fmt.Printf("  Timeout:             %dms\n", config.TimeoutMs)
+	}
+	if config.HealthyThreshold != 0 {
+		fmt.Printf("  Healthy Threshold:   %d\n", config.HealthyThreshold)
+	}
+	if config.UnhealthyThreshold != 0 {
+		fmt.Printf("  Unhealthy Threshold: %d\n", config.UnhealthyThreshold)
+	}
+	if config.HTTP != nil {
+		fmt.Printf("  HTTP Path:           %s\n", config.HTTP.Path)
+		if config.HTTP.Host != "" {
+			fmt.Printf("  HTTP Host:           %s\n", config.HTTP.Host)
+		}
+		if config.HTTP.ExpectedStatus != 0 {
+			fmt.Printf("  HTTP Expected:       %d\n", config.HTTP.ExpectedStatus)
+		}
+	}
+	if config.HTTPS != nil {
+		fmt.Printf("  HTTPS Path:          %s\n", config.HTTPS.Path)
+		if config.HTTPS.Host != "" {
+			fmt.Printf("  HTTPS Host:          %s\n", config.HTTPS.Host)
+		}
+		if config.HTTPS.ExpectedStatus != 0 {
+			fmt.Printf("  HTTPS Expected:      %d\n", config.HTTPS.ExpectedStatus)
+		}
+		if config.HTTPS.SkipTLSVerify {
+			fmt.Printf("  HTTPS Skip TLS:      true\n")
+		}
+	}
+	return nil
 }
 
 func hcList(c *client.Client) error {
