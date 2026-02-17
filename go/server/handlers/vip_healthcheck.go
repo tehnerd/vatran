@@ -156,6 +156,11 @@ func (h *VIPHealthcheckHandler) handleSetVIPHealthcheck(w http.ResponseWriter, r
 	hcCfg := req.Healthcheck
 	state.SetHCConfig(vipKey, &hcCfg)
 
+	// Ensure the HC poller is running when a non-dummy healthcheck is configured
+	if req.Healthcheck.Type != "dummy" {
+		h.manager.EnsurePollerRunning()
+	}
+
 	models.WriteSuccess(w, nil)
 }
 

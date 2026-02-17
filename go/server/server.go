@@ -28,8 +28,7 @@ type Server struct {
 	mux           *http.ServeMux
 	authenticator middleware.Authenticator
 	basicAuth     *auth.BasicAuthenticator
-	authHandler   *handlers.AuthHandler
-	hcPoller      *lb.HCPoller
+	authHandler *handlers.AuthHandler
 }
 
 // New creates a new Server with the provided configuration.
@@ -151,10 +150,8 @@ func (s *Server) StartAsync() <-chan error {
 func (s *Server) Stop(ctx context.Context) error {
 	log.Println("Shutting down server...")
 
-	// Stop HC poller
-	if s.hcPoller != nil {
-		s.hcPoller.Stop()
-	}
+	// Stop HC poller via manager
+	lb.GetManager().StopPoller()
 
 	var errs []error
 
@@ -350,9 +347,8 @@ func (s *Server) InitFromConfig(cfg *FullConfig) error {
 	}
 
 	// Start background poller if any non-dummy HC configs exist
-	if hasNonDummyHC && hcClient != nil {
-		s.hcPoller = lb.NewHCPoller(manager, 5*time.Second)
-		s.hcPoller.Start()
+	if hasNonDummyHC {
+		manager.EnsurePollerRunning()
 	}
 
 	log.Printf("Initialization complete: %d VIPs configured", len(cfg.VIPs))

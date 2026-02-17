@@ -1,7 +1,9 @@
 package lb
 
 import (
+	"log"
 	"sync"
+	"time"
 
 	"github.com/tehnerd/vatran/go/katran"
 )
@@ -19,6 +21,8 @@ type Manager struct {
 	hcClient              *HCClient
 	bgpClient             *BGPClient
 	bgpMinHealthyReals    int
+	hcPoller              *HCPoller
+	pollerInterval        time.Duration
 }
 
 var (
@@ -267,4 +271,50 @@ func (m *Manager) GetBGPMinHealthyReals() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.bgpMinHealthyReals
+}
+
+// SetPollerInterval sets the polling interval for the HC poller.
+// Must be called before EnsurePollerRunning for the interval to take effect.
+//
+// Parameters:
+//   - interval: The polling interval duration.
+func (m *Manager) SetPollerInterval(interval time.Duration) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.pollerInterval = interval
+}
+
+// EnsurePollerRunning starts the HC poller if it is not already running.
+// This is safe to call multiple times; only the first call starts the poller.
+// Requires that an HC client is configured (healthchecker_endpoint is set).
+func (m *Manager) EnsurePollerRunning() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.hcPoller != nil {
+		return
+	}
+	if m.hcClient == nil {
+		return
+	}
+
+	interval := m.pollerInterval
+	if interval == 0 {
+		interval = 5 * time.Second
+	}
+
+	m.hcPoller = NewHCPoller(m, interval)
+	m.hcPoller.Start()
+	log.Println("HC poller started dynamically")
+}
+
+// StopPoller stops the HC poller if it is running.
+func (m *Manager) StopPoller() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.hcPoller != nil {
+		m.hcPoller.Stop()
+		m.hcPoller = nil
+	}
 }
