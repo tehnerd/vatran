@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/tehnerd/vatran/go/katran"
+	"github.com/tehnerd/vatran/go/nicaffinity"
 	"github.com/tehnerd/vatran/go/server/auth"
 	"github.com/tehnerd/vatran/go/server/handlers"
 	"github.com/tehnerd/vatran/go/server/lb"
@@ -220,6 +221,31 @@ func (s *Server) InitFromConfig(cfg *FullConfig) error {
 		manager.SetBGPEndpoint(cfg.LB.Features.BGPEndpoint, cfg.LB.Features.BGPMinHealthyReals)
 		log.Printf("BGP integration enabled: endpoint=%s min_healthy_reals=%d",
 			cfg.LB.Features.BGPEndpoint, manager.GetBGPMinHealthyReals())
+	}
+
+	// Run NIC affinitization if enabled
+	if cfg.Server.NICAffinity != nil && cfg.Server.NICAffinity.Enabled {
+		iface := cfg.Server.NICAffinity.Interface
+		if iface == "" {
+			iface = cfg.LB.Interfaces.Main
+		}
+		log.Printf("Running NIC affinitization on interface %s (dry_run=%v)...", iface, cfg.Server.NICAffinity.DryRun)
+		result, err := nicaffinity.Affinitize(iface, cfg.Server.NICAffinity.DryRun)
+		if err != nil {
+			return fmt.Errorf("NIC affinitization failed: %w", err)
+		}
+		// Override CPU/NUMA config with affinitization results
+		cores := make([]int32, len(result.CPUs))
+		nodes := make([]int32, len(result.NUMANodes))
+		for i, cpu := range result.CPUs {
+			cores[i] = int32(cpu)
+		}
+		for i, node := range result.NUMANodes {
+			nodes[i] = int32(node)
+		}
+		cfg.LB.CPU.ForwardingCores = cores
+		cfg.LB.CPU.NUMANodes = nodes
+		log.Printf("NIC affinitization complete: %d CPUs assigned", len(result.CPUs))
 	}
 
 	// Build katran config from YAML config

@@ -39,6 +39,14 @@ server:
   # Base directory for BPF programs
   bpf_prog_dir: "/path/to/bpf"
 
+  # NIC IRQ affinity configuration (optional)
+  # When enabled, the server affinitizes NIC RX queue IRQs to CPUs on startup
+  # and populates forwarding_cores/numa_nodes from the result.
+  # nic_affinity:
+  #   enabled: true
+  #   interface: "eth0"         # Defaults to lb.interfaces.main if empty
+  #   dry_run: false            # Preview assignments without writing affinity
+
   # Authentication configuration (optional)
   # auth:
   #   enabled: false                          # Enable authentication

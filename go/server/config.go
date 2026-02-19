@@ -83,6 +83,9 @@ type Config struct {
 	// BPFProgDir is the base directory for BPF program files.
 	// BalancerProgPath and HealthcheckingProgPath in requests are relative to this directory.
 	BPFProgDir string
+	// NICAffinity contains NIC affinitization configuration.
+	// If nil, NIC affinitization is not performed on startup.
+	NICAffinity *NICAffinityYAMLConfig
 	// Authenticator is the authenticator to use for the server.
 	// If nil, NoOpAuthenticator is used (all requests allowed).
 	Authenticator middleware.Authenticator
@@ -247,6 +250,19 @@ type ServerYAMLConfig struct {
 	StaticDir string `yaml:"static_dir"`
 	// BPFProgDir is the base directory for BPF programs.
 	BPFProgDir string `yaml:"bpf_prog_dir"`
+	// NICAffinity contains NIC affinitization configuration (optional).
+	NICAffinity *NICAffinityYAMLConfig `yaml:"nic_affinity,omitempty"`
+}
+
+// NICAffinityYAMLConfig contains NIC IRQ affinity configuration from YAML.
+type NICAffinityYAMLConfig struct {
+	// Enabled indicates whether NIC affinitization should run on startup.
+	Enabled bool `yaml:"enabled"`
+	// Interface is the network interface to affinitize.
+	// Defaults to lb.interfaces.main if empty.
+	Interface string `yaml:"interface,omitempty"`
+	// DryRun previews assignments without writing IRQ affinity.
+	DryRun bool `yaml:"dry_run"`
 }
 
 // TLSYAMLConfig contains TLS configuration from YAML.
@@ -571,6 +587,7 @@ func (sc *ServerYAMLConfig) ToServerConfig() *Config {
 	}
 	cfg.StaticDir = sc.StaticDir
 	cfg.BPFProgDir = sc.BPFProgDir
+	cfg.NICAffinity = sc.NICAffinity
 
 	// Convert TLS config
 	if sc.TLS != nil && sc.TLS.CertFile != "" && sc.TLS.KeyFile != "" {
@@ -825,6 +842,11 @@ func buildFullConfigFromRuntime(serverCfg *Config, katranCfg *KatranConfigExport
 	fc.Server.EnableLogging = &enableLogging
 	enableRecovery := serverCfg.EnableRecovery
 	fc.Server.EnableRecovery = &enableRecovery
+
+	// Build NIC affinity config if present
+	if serverCfg.NICAffinity != nil {
+		fc.Server.NICAffinity = serverCfg.NICAffinity
+	}
 
 	// Build auth config if present
 	if serverCfg.Auth != nil && serverCfg.Auth.Enabled {
