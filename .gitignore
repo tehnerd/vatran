@@ -9,3 +9,4 @@ go/cmd/authctl/authctl
 go/cmd/hc-service/hc-service
 go/cmd/bgp-service/bgp-service
 go/cmd/nic-affinity/nic-affinity
+go/cmd/backend-setup/backend-setup
